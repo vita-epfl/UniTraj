@@ -1,0 +1,8 @@
+wandb
+torch
+pytorch-lightning
+hydra-core
+scikit-learn
+einops
+easydict
+panda3d-simplepbr==0.10

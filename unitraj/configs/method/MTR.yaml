@@ -1,0 +1,70 @@
+# common
+model_name: MTR
+
+# model
+CONTEXT_ENCODER:
+  NAME: MTREncoder
+  NUM_OF_ATTN_NEIGHBORS: 7
+  NUM_INPUT_ATTR_AGENT: 39
+  NUM_INPUT_ATTR_MAP: 9
+  NUM_CHANNEL_IN_MLP_AGENT: 256
+  NUM_CHANNEL_IN_MLP_MAP: 64
+  NUM_LAYER_IN_MLP_AGENT: 3
+  NUM_LAYER_IN_MLP_MAP: 5
+  NUM_LAYER_IN_PRE_MLP_MAP: 3
+  D_MODEL: 256
+  NUM_ATTN_LAYERS: 6
+  NUM_ATTN_HEAD: 8
+  DROPOUT_OF_ATTN: 0.1
+  USE_LOCAL_ATTN: True
+
+MOTION_DECODER:
+  NAME: MTRDecoder
+  NUM_MOTION_MODES: 6
+  INTENTION_POINTS_FILE: 'models/mtr/cluster_64_center_dict_6s.pkl'
+  D_MODEL: 512
+  NUM_DECODER_LAYERS: 6
+  NUM_ATTN_HEAD: 8
+  MAP_D_MODEL: 256
+  DROPOUT_OF_ATTN: 0.1
+  NUM_BASE_MAP_POLYLINES: 256
+  NUM_WAYPOINT_MAP_POLYLINES: 128
+  LOSS_WEIGHTS: {
+    'cls': 1.0,
+    'reg': 1.0,
+    'vel': 0.5
+  }
+
+  NMS_DIST_THRESH: 2.5
+
+# train
+max_epochs: 40
+learning_rate: 0.0001
+learning_rate_sched: [ 22, 24, 26, 28 ]
+optimizer: AdamW
+scheduler: lambdaLR
+grad_clip_norm: 1000.0
+weight_decay: 0.01
+lr_decay: 0.5
+lr_clip: 0.000001
+WEIGHT_DECAY: 0.01
+train_batch_size: 256 #32 #128
+eval_batch_size: 512 #32 #128
+
+# data related
+max_num_agents: 64
+map_range: 100
+max_num_roads: 768
+
+# will be overwritten if manually_split_lane is True
+max_points_per_lane: 20
+
+manually_split_lane: True
+point_sampled_interval: 1
+num_points_each_polyline: 20
+vector_break_dist_thresh: 1.0
+
+
+
+
+

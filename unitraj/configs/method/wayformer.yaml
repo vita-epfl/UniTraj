@@ -1,0 +1,43 @@
+# common
+model_name: wayformer
+
+# model
+use_map_image: False
+use_map_lanes: True
+num_modes: 6
+num_agent_feature: 29
+num_map_feature: 9
+hidden_size: 256
+num_encoder_layers: 2
+num_decoder_layers: 8
+tx_hidden_size: 1024
+tx_num_heads: 4
+dropout: 0.1
+entropy_weight: 40.0
+kl_weight: 20.0
+use_FDEADE_aux_loss: True
+num_queries_dec: 64
+num_queries_enc: 192
+
+# train
+max_epochs: 100 #150 #40
+learning_rate: 0.0001 # 0.00075 # 1e-3 for lanegcn
+learning_rate_sched: [ 10, 20, 30, 40, 50 ]
+optimizer: AdamW #According to PyTorch naming
+scheduler: multistep # plateau, multistep
+ewc_lambda: 2000
+grad_clip_norm: 5
+train_batch_size: 128 #32 #128
+eval_batch_size: 512 #32 #128
+
+# data related
+max_num_agents: 15
+map_range: 100
+max_num_roads: 256
+max_points_per_lane: 20 # will be overwritten if manually_split_lane is True
+manually_split_lane: False
+# lane split related params
+point_sampled_interval: 1
+num_points_each_polyline: 20
+vector_break_dist_thresh: 1.0
+
