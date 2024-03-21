@@ -1,6 +1,13 @@
 # UniTraj
 
-**A Unified Framework for Cross-Dataset Generalization of Vehicle Trajectory Prediction**
+[//]: # ([**Webpage**]&#40;https://metadriverse.github.io/trafficgen/&#41; | )
+
+[//]: # ([**Code**]&#40;https://github.com/metadriverse/trafficgen&#41; |)
+
+[//]: # ([**Video**]&#40;https://youtu.be/jPS93-d6msM&#41; |)
+[//]: # ([**Paper**]&#40;https://arxiv.org/pdf/2210.06609.pdf&#41;)
+
+**A Unified Framework for Scalable Vehicle Trajectory Prediction**
 
 💡UniTraj allows users to train and evaluate trajectory prediction models from real-world datasets like Waymo, nuPlan, 
 nuScenes and Argoverse2 in a unified pipeline. 
