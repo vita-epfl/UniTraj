@@ -1,31 +1,31 @@
 # exp setting
-exp_name: 'test'
-ckpt_path: null
-seed: 42
-debug: True
-devices: [ 0 ]
+exp_name: 'test' # name that will be used in wandb
+ckpt_path: null # checkpoint path, used for evaluation
+seed: 42 # random seed
+debug: True # debug mode, will use cpu only
+devices: [ 0 ] # gpu ids
 
 # data related
-load_num_workers: 0
-train_data_path: [ "data_samples/nuscenes" ]
-val_data_path: [ "data_samples/nuscenes" ]
-max_data_num: [ 1000 ]
-past_len: 21 # 0.1s
-future_len: 60 # 0.1s
-object_type: [ 'VEHICLE' ]#, 'PEDESTRIAN', 'CYCLIST']
-line_type: [ 'lane','stop_sign','road_edge','road_line','crosswalk','speed_bump' ] #['lane','stop_sign','road_edge','road_line','crosswalk','speed_bump']
-masked_attributes: [ 'z_axis, size' ] # 'z_axis, size, velocity, acceleration, heading'
-trajectory_sample_interval: 1 # 0.1s
-only_train_on_ego: False
-center_offset_of_map: [ 30.0, 0.0 ]
-use_cache: False
-overwrite_cache: True
-store_data_in_memory: False
+load_num_workers: 0 # number of workers for loading data
+train_data_path: [ "data_samples/nuscenes" ] # list of paths to the training data
+val_data_path: [ "data_samples/nuscenes" ] # list of paths to the validation data
+max_data_num: [ 1000 ] # maximum number of data for each training dataset
+past_len: 21 # history trajectory length, 2.1s
+future_len: 60 # future trajectory length, 6s
+object_type: [ 'VEHICLE' ]#, 'PEDESTRIAN', 'CYCLIST'] # object types included in the training set
+line_type: [ 'lane','stop_sign','road_edge','road_line','crosswalk','speed_bump' ] # line type to be considered in the input
+masked_attributes: [ 'z_axis, size' ] # attributes to be masked in the input
+trajectory_sample_interval: 1 # sample interval for the trajectory
+only_train_on_ego: False # only train on AV
+center_offset_of_map: [ 30.0, 0.0 ] # center offset of the map
+use_cache: False # use cache for data loading
+overwrite_cache: True # overwrite existing cache
+store_data_in_memory: False # store data in memory
 
 # official evaluation
 nuscenes_dataroot: '/mnt/nas3_rcp_enac_u0900_vita_scratch/datasets/Prediction-Dataset/nuscenes/nuscenes_root'
-eval_nuscenes: False
-eval_waymo: False
+eval_nuscenes: False # whether to evaluate with nuscenes evaluation tool
+eval_waymo: False # whether to evaluate with waymo evaluation tool
 
 defaults:
   - method: autobot

@@ -14,7 +14,7 @@ nuScenes and Argoverse2 in a unified pipeline.
 
 ![system](docs/assets/framework.png)
 
-🔥Powered by [Hydra](https://hydra.cc/docs/intro/), [Pytorch-lightinig](https://lightning.ai/docs/pytorch/stable/), and [WandB](https://wandb.ai/site), the framework is easy to configure, train and logging.
+🔥Powered by [Hydra](https://hydra.cc/docs/intro/), [Pytorch-lightinig](https://lightning.ai/docs/pytorch/stable/), and [WandB](https://wandb.ai/site), the framework is easy to configure, train and log.
 
 ![system](docs/assets/support.png)
 
@@ -28,10 +28,10 @@ conda activate unitraj
 
 2. Install Unitraj:
 ```bash
-git clone https://github.com/vita-epfl/MotionNet.git
+git clone git@github.com:metadriverse/scenarionet.git
 cd unitraj
 pip install -r requirements.txt
-wandb login
+pip setup.py develop
 ```
 
 You can verify the installation of UniTraj via running the training script:
@@ -44,7 +44,7 @@ The model will be trained on several sample data.
 There are three main components in UniTraj: dataset, model and config.
 The structure of the code is as follows:
 ```
-motionnet
+unitraj
 ├── configs
 │   ├── config.yaml
 │   ├── method
@@ -72,18 +72,22 @@ UniTraj takes data from [ScenarioNet](https://github.com/metadriverse/scenarione
 ### 2. Configuration
 UniTraj uses [Hydra](https://hydra.cc/docs/intro/) to manage configuration files.
 
-Universal configuration file is located in `motionnet/config/config.yaml`.
-Each model has its own configuration file in `motionnet/config/method/`, for example, `motionnet/config/method/autobot.yaml`.
+Universal configuration file is located in `unitraj/config/config.yaml`.
+Each model has its own configuration file in `unitraj/config/method/`, for example, `unitraj/config/method/autobot.yaml`.
 
 The configuration file is organized in a hierarchical structure, and the configuration of the model is inherited from the universal configuration file.
 
 #### Configuration Example
-TODO
+Please refer to config.yaml and method/autobot.yaml for more details.
 
 ### 2. Train
 ```python train.py```
 
 ### 3. Evaluation
+1. In config.yaml, set the `checkpoint` to the path of the trained model.
+2. In config.yaml, set the path of the validation dataset.
+3. (Optional) In config.yaml, set eval_waymo or eval_nuscenes to True if you want to evaluate the model on Waymo or nuScenes dataset. (Install waymo-open-dataset and nuscenes-devkit first)
+
 ```python evaluation.py```
 
 ### 4. Dataset Analysis
@@ -92,14 +96,15 @@ TODO
 
 ## Contribute to UniTraj
 ### Implement a new model
-1. Create a new config file in `motionnet/config/` folder, for example, `motionnet/config/lanegcn.yaml`
-2. (Optional) Create a new dataset class in `motionnet/dataset/` folder, for example, `motionnet/dataset/lanegcn_dataset.py`, and inherit `motionnet/dataset/base_dataset.py`, implement `def process(data)` function
-2. Create a new model class in `motionnet/model/` folder, for example, `motionnet/model/lanegcn.py`, and inherit from pl.LightningModule
+1. Create a new config file in `unitraj/config/` folder, for example, `unitraj/config/new_model.yaml`
+2. (Optional) Create a new dataset class in `unitraj/datasets/` folder, for example, `unitraj/datasets/new_dataset.py`, and inherit `unitraj/dataset/base_dataset.py`
+2. Create a new model class in `unitraj/model/` folder, for example, `unitraj/model/lanegcn.py`, and inherit from pl.LightningModule
 
-### Internal Format
-ScenarioNet data will be further preprocessed to internal format for easy processing. 
+### Batch Data Format
+The default batch data format is: 
 
-``obj_trajs [num_centered_obj, num_surrounding_objs, past_time_steps, num_attribute=29]
+For trajectory input:
+``obj_trajs [num_centered_obj, num_surrounding_objs, past_time_steps, num_attribute]
 ``
 
 ``
@@ -112,6 +117,7 @@ ScenarioNet data will be further preprocessed to internal format for easy proces
 [27:39] ax,ay
 ``
 
+For map input:
 ``
 map_polylines [num_centered_obj, num_surrounding_lines, max_points_per_lane, num_attribute=9]
 ``
@@ -123,11 +129,17 @@ map_polylines [num_centered_obj, num_surrounding_lines, max_points_per_lane, num
 [7:9] previous_point_xy 
 ``
 
-## Training on RCP
-0. Install runAI CLI and Kubernetes: https://wiki.rcp.epfl.ch/home/CaaS/Quick_Start
-1. Update the motionnet/run_rcp/wandb-secret.yaml according to the instruction: https://wiki.rcp.epfl.ch/en/home/CaaS/how-to-use-secret 
-2. Clone the repo to RCP server, and modify the config file
-3. Modify the motionnet/run_rcp/train.yaml, especially configs related to file path, username, etc.
-3. Run the following command to train on RCP server
-```kubectl create -f train.yaml```
+[//]: # (## Training on RCP)
+
+[//]: # (0. Install runAI CLI and Kubernetes: https://wiki.rcp.epfl.ch/home/CaaS/Quick_Start)
+
+[//]: # (1. Update the unitraj/run_rcp/wandb-secret.yaml according to the instruction: https://wiki.rcp.epfl.ch/en/home/CaaS/how-to-use-secret )
+
+[//]: # (2. Clone the repo to RCP server, and modify the config file)
+
+[//]: # (3. Modify the unitraj/run_rcp/train.yaml, especially configs related to file path, username, etc.)
+
+[//]: # (3. Run the following command to train on RCP server)
+
+[//]: # (```kubectl create -f train.yaml```)
 
