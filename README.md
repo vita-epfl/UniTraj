@@ -84,11 +84,9 @@ Please refer to config.yaml and method/autobot.yaml for more details.
 ```python train.py```
 
 ### 3. Evaluation
-1. In config.yaml, set the `checkpoint` to the path of the trained model.
-2. In config.yaml, set the path of the validation dataset.
-3. (Optional) In config.yaml, set eval_waymo or eval_nuscenes to True if you want to evaluate the model on Waymo or nuScenes dataset. (Install waymo-open-dataset and nuscenes-devkit first)
-
-```python evaluation.py```
+1. In config.yaml, set the `ckpt_path` to the path of the trained model and `val_data_path` to the validation data path.
+2. (Optional) In config.yaml, set eval_waymo or eval_nuscenes to True if you want to evaluate the model with Waymo or nuScenes official evaluation tool. (Install waymo-open-dataset and nuscenes-devkit first)
+3. Run```python evaluation.py```
 
 ### 4. Dataset Analysis
 ```python data_analysis.py```
