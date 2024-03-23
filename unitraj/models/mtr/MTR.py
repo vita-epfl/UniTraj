@@ -47,8 +47,13 @@ class MotionTransformer(BaseModel):
 
         mode_probs, out_dists = out_dict['pred_list'][-1]
         output = {}
-        output['predicted_probability'] = mode_probs  # #[B, c]
-        output['predicted_trajectory'] = out_dists  # [B, c, T, 5] to be able to parallelize code
+
+        if self.training:
+            output['predicted_probability'] = mode_probs  # #[B, c]
+            output['predicted_trajectory'] = out_dists  # [B, c, T, 5] to be able to parallelize code
+        else:
+            output['predicted_probability'] = out_dict['pred_scores']  # #[B, c]
+            output['predicted_trajectory'] = out_dict['pred_trajs']  # [B, c, T, 5] to be able to parallelize code
 
         loss, tb_dict, disp_dict = self.motion_decoder.get_loss()
         return output, loss
