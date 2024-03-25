@@ -1,11 +1,7 @@
 # UniTraj
 
-[//]: # ([**Webpage**]&#40;https://metadriverse.github.io/trafficgen/&#41; | )
-
-[//]: # ([**Code**]&#40;https://github.com/metadriverse/trafficgen&#41; |)
-
-[//]: # ([**Video**]&#40;https://youtu.be/jPS93-d6msM&#41; |)
-[//]: # ([**Paper**]&#40;https://arxiv.org/pdf/2210.06609.pdf&#41;)
+[**Code**](https://github.com/vita-epfl/UniTraj) |
+[**Paper**](https://arxiv.org/pdf/2403.15098.pdf)
 
 **A Unified Framework for Scalable Vehicle Trajectory Prediction**
 
