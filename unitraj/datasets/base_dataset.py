@@ -270,21 +270,23 @@ class BaseDataset(Dataset):
             elif type in [19]:
                 map_infos['crosswalk'].append(cur_info)
                 polyline = v['polygon']
-        try:
             if polyline.shape[-1] == 2:
                 polyline = np.concatenate((polyline, np.zeros((polyline.shape[0], 1))), axis=-1)
-            cur_polyline_dir = get_polyline_dir(polyline)
-            type_array = np.zeros([polyline.shape[0], 1])
-            type_array[:] = type
-            cur_polyline = np.concatenate((polyline, cur_polyline_dir, type_array), axis=-1)
-
+            try:
+                cur_polyline_dir = get_polyline_dir(polyline)
+                type_array = np.zeros([polyline.shape[0], 1])
+                type_array[:] = type
+                cur_polyline = np.concatenate((polyline, cur_polyline_dir, type_array), axis=-1)
+            except:
+                cur_polyline = np.zeros((0, 7), dtype=np.float32)
             polylines.append(cur_polyline)
             cur_info['polyline_index'] = (point_cnt, point_cnt + len(cur_polyline))
             point_cnt += len(cur_polyline)
+
+        try:
             polylines = np.concatenate(polylines, axis=0).astype(np.float32)
         except:
             polylines = np.zeros((0, 7), dtype=np.float32)
-
         map_infos['all_polylines'] = polylines
 
         dynamic_map_infos = {
