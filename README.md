@@ -137,3 +137,14 @@ map_polylines [num_centered_obj, num_surrounding_lines, max_points_per_lane, num
 
 [//]: # (```kubectl create -f train.yaml```)
 
+---
+
+### For citation:
+```
+@article{feng2024unitraj,
+  title={UniTraj: A Unified Framework for Scalable Vehicle Trajectory Prediction},
+  author={Feng, Lan and Bahari, Mohammadhossein and Amor, Kaouther Messaoud Ben and Zablocki, {\'E}loi and Cord, Matthieu and Alahi, Alexandre},
+  journal={arXiv preprint arXiv:2403.15098},
+  year={2024}
+}
+
