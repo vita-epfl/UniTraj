@@ -65,6 +65,9 @@ class BaseModel(pl.LightningModule):
             print(result_format_str)
 
         elif self.config.get('eval_nuscenes', False):
+            import os
+            os.makedirs('submission', exist_ok=True)
+            json.dump(self.pred_dicts, open(os.path.join('submission', "evalai_submission.json"), "w"))
             metric_results = self.compute_metrics_nuscenes(self.pred_dicts)
             print('\n', metric_results)
         self.pred_dicts = []
