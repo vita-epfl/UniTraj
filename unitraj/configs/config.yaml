@@ -14,7 +14,7 @@ past_len: 21 # history trajectory length, 2.1s
 future_len: 60 # future trajectory length, 6s
 object_type: [ 'VEHICLE' ]#, 'PEDESTRIAN', 'CYCLIST'] # object types included in the training set
 line_type: [ 'lane','stop_sign','road_edge','road_line','crosswalk','speed_bump' ] # line type to be considered in the input
-masked_attributes: [ 'z_axis, size' ] # attributes to be masked in the input
+masked_attributes: [ 'z_axis', 'size' ] # attributes to be masked in the input
 trajectory_sample_interval: 1 # sample interval for the trajectory
 only_train_on_ego: False # only train on AV
 center_offset_of_map: [ 30.0, 0.0 ] # center offset of the map
