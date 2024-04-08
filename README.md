@@ -25,10 +25,10 @@ conda activate unitraj
 
 2. Install Unitraj:
 ```bash
-git clone git@github.com:metadriverse/scenarionet.git
+git clone https://github.com/vita-epfl/UniTraj.git
 cd unitraj
 pip install -r requirements.txt
-pip setup.py develop
+python setup.py develop
 ```
 
 You can verify the installation of UniTraj via running the training script:
