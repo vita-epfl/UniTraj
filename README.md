@@ -106,10 +106,10 @@ For trajectory input:
 [0:3] position (x, y, z)  
 [3:6] size (l, w, h)
 [6:11] type_onehot
-[11:23] time_onehot
-[23:35] heading_encoding
-[25:37] vx,vy
-[27:39] ax,ay
+[11:33] time_onehot
+[33:35] heading_encoding
+[35:37] vx,vy
+[37:39] ax,ay
 ``
 
 For map input:
