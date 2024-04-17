@@ -773,10 +773,16 @@ class BaseDataset(Dataset):
         map_polylines_center = temp_sum / np.clip(map_polylines_mask.sum(axis=-1).astype(float)[:, :, None], a_min=1.0,
                                                   a_max=None)  # (num_center_objects, num_polylines, 3)
 
-        xy_pos_pre = map_polylines[:, :, :, 0:2]
+        xy_pos_pre = map_polylines[:, :, :, 0:3]
         xy_pos_pre = np.roll(xy_pos_pre, shift=1, axis=-2)
         xy_pos_pre[:, :, 0, :] = xy_pos_pre[:, :, 1, :]
-        map_polylines = np.concatenate((map_polylines, xy_pos_pre), axis=-1)
+
+        map_types = map_polylines[:, :, :, -1]
+        map_polylines = map_polylines[:, :, :, :-1]
+        # one-hot encoding for map types, 14 types in total, use 20 for reserved types
+        map_types = np.eye(20)[map_types.astype(int)]
+
+        map_polylines = np.concatenate((map_polylines, xy_pos_pre, map_types), axis=-1)
         map_polylines[map_polylines_mask == 0] = 0
 
         return map_polylines, map_polylines_mask, map_polylines_center
