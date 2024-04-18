@@ -5,7 +5,8 @@ import pytorch_lightning as pl
 import torch
 
 import unitraj.datasets.common_utils as common_utils
-
+import unitraj.utils.visualization as visualization
+import wandb
 
 class BaseModel(pl.LightningModule):
 
@@ -49,13 +50,13 @@ class BaseModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         prediction, loss = self.forward(batch)
         self.compute_official_evaluation(batch, prediction)
-        self.log_info(batch, prediction, status='train')
+        self.log_info(batch, batch_idx, prediction, status='train')
         return loss
 
     def validation_step(self, batch, batch_idx):
         prediction, loss = self.forward(batch)
         self.compute_official_evaluation(batch, prediction)
-        self.log_info(batch, prediction, status='val')
+        self.log_info(batch, batch_idx,prediction, status='val')
         return loss
 
     def on_validation_epoch_end(self):
@@ -165,7 +166,7 @@ class BaseModel(pl.LightningModule):
 
             self.pred_dicts += pred_dict_list
 
-    def log_info(self, batch, prediction, status='train'):
+    def log_info(self, batch, batch_idx, prediction, status='train'):
         ## logging
         # Split based on dataset
         inputs = batch['input_dict']
@@ -208,11 +209,6 @@ class BaseModel(pl.LightningModule):
             batch_idx_for_this_dataset = np.argwhere([n == str(dataset_name) for n in dataset_names])[:, 0]
             for key in loss_dict.keys():
                 new_dict[dataset_name + '/' + key] = loss_dict[key][batch_idx_for_this_dataset]
-        # # calculate the average metrics of all the datasets
-        # avg_dict = {}
-        # for key in important_metrics:
-        #     key_for_all_dataset = [dataset_name+'/'+key for dataset_name in unique_dataset_names]
-        #     avg_dict['avg/'+key] = np.array(np.mean([new_dict[k].mean() for k in key_for_all_dataset])).reshape(1)
 
         # merge new_dict with log_dict
         loss_dict.update(new_dict)
@@ -264,4 +260,9 @@ class BaseModel(pl.LightningModule):
 
         for k, v in loss_dict.items():
             self.log(status + "/" + k, v, on_step=False, on_epoch=True, sync_dist=True, batch_size=size_dict[k])
+
+        if status == 'val' and batch_idx==0 and not self.config.debug:
+            img = visualization.visualize_prediction(batch, prediction)
+            wandb.log({"prediction": [wandb.Image(img)]})
+
         return

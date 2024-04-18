@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
-
+import matplotlib.cm as cm
 
 # input
 # ego: (16,3)
@@ -153,3 +153,69 @@ def concatenate_varying(image_list, column_counts):
         x_offset += column.width
 
     return final_image
+
+def visualize_prediction(batch,prediction,draw_index=0):
+    def draw_line_with_mask(point1, point2, color, line_width=4):
+        ax.plot([point1[0], point2[0]], [point1[1], point2[1]], linewidth=line_width, color=color)
+    def interpolate_color(t, total_t):
+        # Start is green, end is blue
+        return (0, 1 - t / total_t, t / total_t)
+
+    def interpolate_color_ego(t, total_t):
+        # Start is red, end is blue
+        return (1 - t / total_t, 0, t / total_t)
+    def draw_trajectory(trajectory, line_width, ego=False):
+        total_t = len(trajectory)
+        for t in range(total_t - 1):
+            if ego:
+                color = interpolate_color_ego(t, total_t)
+                if trajectory[t, 0] and trajectory[t + 1, 0]:
+                    draw_line_with_mask(trajectory[t], trajectory[t + 1], color=color, line_width=line_width)
+            else:
+                color = interpolate_color(t, total_t)
+                if trajectory[t, 0] and trajectory[t + 1, 0]:
+                    draw_line_with_mask(trajectory[t], trajectory[t + 1], color=color, line_width=line_width)
+    batch = batch['input_dict']
+    map_lanes = batch['map_polylines'][draw_index].cpu().numpy()
+    map_mask = batch['map_polylines_mask'][draw_index].cpu().numpy()
+    past_traj = batch['obj_trajs'][draw_index].cpu().numpy()
+    future_traj = batch['obj_trajs_future_state'][draw_index].cpu().numpy()
+    past_traj_mask = batch['obj_trajs_mask'][draw_index].cpu().numpy()
+    future_traj_mask = batch['obj_trajs_future_mask'][draw_index].cpu().numpy()
+    pred_future_prob = prediction['predicted_probability'][draw_index].detach().cpu().numpy()
+    pred_future_traj = prediction['predicted_trajectory'][draw_index].detach().cpu().numpy()
+
+    map_xy = map_lanes[..., :2]
+
+    map_type = map_lanes[...,0, -20:]
+
+    # draw map
+    fig, ax = plt.subplots()
+    ax.set_aspect('equal')
+    # Plot the map with mask check
+    for idx,lane in enumerate(map_xy):
+        lane_type = map_type[idx]
+        # convert onehot to index
+        lane_type = np.argmax(lane_type)
+        if lane_type in [1, 2, 3]:
+            continue
+        for i in range(len(lane) - 1):
+            if map_mask[idx,i] and map_mask[idx,i+1]:
+                draw_line_with_mask(lane[i], lane[i+1], color='grey', line_width=1.5)
+
+    # draw past trajectory
+    for idx, traj in enumerate(past_traj):
+        draw_trajectory(traj, line_width=2)
+
+    # draw future trajectory
+    for idx, traj in enumerate(future_traj):
+        draw_trajectory(traj, line_width=2)
+
+    # predicted future trajectory is (n,future_len,2) with n possible future trajectories, visualize all of them
+    for idx, traj in enumerate(pred_future_traj):
+        # calculate color based on probability
+        color = cm.hot(pred_future_prob[idx])
+        for i in range(len(traj) - 1):
+            draw_line_with_mask(traj[i], traj[i+1], color=color, line_width=2)
+
+    return plt
