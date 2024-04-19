@@ -8,7 +8,7 @@ import torch
 from torch.autograd import Function
 
 try:
-    from knn import knn_cuda
+    from unitraj.models.mtr.ops.knn import knn_cuda
 except:
     pass
 
