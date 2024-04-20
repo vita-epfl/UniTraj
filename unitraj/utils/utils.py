@@ -1,8 +1,22 @@
+import glob
+import os
 import random
 
 import numpy as np
 import pytorch_lightning as pl
 import torch
+
+
+def find_latest_checkpoint(base_path):
+    # Pattern to match all .ckpt files in the base_path recursively
+    search_pattern = os.path.join(base_path, 'epoch*', '*.ckpt')
+    # List all files matching the pattern
+    list_of_files = glob.glob(search_pattern, recursive=True)
+    # Find the file with the latest modification time
+    if not list_of_files:
+        return None
+    latest_file = max(list_of_files, key=os.path.getmtime)
+    return latest_file
 
 
 def set_seed(seed_value=42):

@@ -1,5 +1,4 @@
 import os
-import subprocess
 
 from setuptools import find_packages, setup
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
@@ -12,8 +11,8 @@ def make_cuda_ext(name, module, sources):
     )
     return cuda_ext
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     setup(
         name='UniTraj',
         version=1.0,

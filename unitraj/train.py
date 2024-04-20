@@ -6,10 +6,11 @@ from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import DataLoader
 from models import build_model
 from datasets import build_dataset
-from utils.utils import set_seed
+from utils.utils import set_seed, find_latest_checkpoint
 from pytorch_lightning.callbacks import ModelCheckpoint  # Import ModelCheckpoint
 import hydra
 from omegaconf import OmegaConf
+import os
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
@@ -56,8 +57,9 @@ def train(cfg):
         callbacks=call_backs
     )
 
-    if cfg.ckpt_path is not None:
-        trainer.validate(model=model, dataloaders=val_loader, ckpt_path=cfg.ckpt_path)
+    # automatically resume training
+    if cfg.ckpt_path is None and not cfg.debug:
+        cfg.ckpt_path = find_latest_checkpoint(os.path.join('unitraj', cfg.exp_name, 'checkpoints'))
 
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader, ckpt_path=cfg.ckpt_path)
 

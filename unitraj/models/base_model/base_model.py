@@ -3,10 +3,11 @@ import json
 import numpy as np
 import pytorch_lightning as pl
 import torch
+import wandb
 
 import unitraj.datasets.common_utils as common_utils
 import unitraj.utils.visualization as visualization
-import wandb
+
 
 class BaseModel(pl.LightningModule):
 
@@ -56,7 +57,7 @@ class BaseModel(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         prediction, loss = self.forward(batch)
         self.compute_official_evaluation(batch, prediction)
-        self.log_info(batch, batch_idx,prediction, status='val')
+        self.log_info(batch, batch_idx, prediction, status='val')
         return loss
 
     def on_validation_epoch_end(self):
@@ -236,7 +237,7 @@ class BaseModel(pl.LightningModule):
                                   -1].cpu().numpy()  # Last is difficulty at 6s (others are 2s and 4s)
             for kalman_bucket, (low, high) in {"easy": [0, 30], "medium": [30, 60], "hard": [60, 9999999]}.items():
                 batch_idx_for_kalman_diff = \
-                np.where(np.logical_and(low <= kalman_difficulties, kalman_difficulties < high))[0]
+                    np.where(np.logical_and(low <= kalman_difficulties, kalman_difficulties < high))[0]
                 if len(batch_idx_for_kalman_diff) > 0:
                     for key in important_metrics:
                         new_dict["kalman/" + kalman_bucket + "_" + key] = loss_dict[key][batch_idx_for_kalman_diff]
@@ -261,7 +262,7 @@ class BaseModel(pl.LightningModule):
         for k, v in loss_dict.items():
             self.log(status + "/" + k, v, on_step=False, on_epoch=True, sync_dist=True, batch_size=size_dict[k])
 
-        if status == 'val' and batch_idx==0 and not self.config.debug:
+        if status == 'val' and batch_idx == 0 and not self.config.debug:
             img = visualization.visualize_prediction(batch, prediction)
             wandb.log({"prediction": [wandb.Image(img)]})
 

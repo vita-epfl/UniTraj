@@ -59,8 +59,8 @@ def nll_loss_gmm_direct(pred_scores, pred_trajs, gt_trajs, gt_valid_mask, pre_ne
     # -log(a^-1 * e^b) = log(a) - b
     reg_gmm_log_coefficient = log_std1 + log_std2 + 0.5 * torch.log(1 - rho ** 2)  # (batch_size, num_timestamps)
     reg_gmm_exp = (0.5 * 1 / (1 - rho ** 2)) * (
-                (dx ** 2) / (std1 ** 2) + (dy ** 2) / (std2 ** 2) - 2 * rho * dx * dy / (
-                    std1 * std2))  # (batch_size, num_timestamps)
+            (dx ** 2) / (std1 ** 2) + (dy ** 2) / (std2 ** 2) - 2 * rho * dx * dy / (
+            std1 * std2))  # (batch_size, num_timestamps)
 
     reg_loss = ((reg_gmm_log_coefficient + reg_gmm_exp) * gt_valid_mask).sum(dim=-1)
 
