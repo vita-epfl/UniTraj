@@ -9,8 +9,12 @@ from torch.autograd import Function
 
 try:
     from unitraj.models.mtr.ops.knn import knn_cuda
-except:
-    pass
+except ImportError:
+    try:
+        from knn import knn_cuda
+    except ImportError:
+        print("Cannot import knn_cuda for MTR. Please check the cuda compilation.")
+        pass
 
 
 class KNNBatch(Function):

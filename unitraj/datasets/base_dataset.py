@@ -815,7 +815,7 @@ class BaseDataset(Dataset):
 
             # use pre points to map
             # (num_center_objects, num_polylines, num_points_each_polyline, num_feat)
-            xy_pos_pre = neighboring_polylines[:, :, :, 0:2]
+            xy_pos_pre = neighboring_polylines[:, :, :, 0:3]
             xy_pos_pre = np.roll(xy_pos_pre, shift=1, axis=-2)
             xy_pos_pre[:, :, 0, :] = xy_pos_pre[:, :, 1, :]
             neighboring_polylines = np.concatenate((neighboring_polylines, xy_pos_pre), axis=-1)
@@ -906,6 +906,14 @@ class BaseDataset(Dataset):
             axis=-2)  # (num_center_objects, num_polylines, 3)
         map_polylines_center = temp_sum / np.clip(map_polylines_mask.sum(axis=-1)[:, :, np.newaxis].astype(float),
                                                   a_min=1.0, a_max=None)
+
+        map_types = map_polylines[:, :, :, 6]
+        xy_pos_pre = map_polylines[:, :, :, 7:]
+        map_polylines = map_polylines[:, :, :, :6]
+        # one-hot encoding for map types, 14 types in total, use 20 for reserved types
+        map_types = np.eye(20)[map_types.astype(int)]
+
+        map_polylines = np.concatenate((map_polylines, xy_pos_pre, map_types), axis=-1)
 
         return map_polylines, map_polylines_mask, map_polylines_center
 

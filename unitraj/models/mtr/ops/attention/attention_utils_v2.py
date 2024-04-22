@@ -7,9 +7,12 @@ from torch.autograd import Function, Variable
 
 try:
     from unitraj.models.mtr.ops.attention import attention_cuda
-except:
-    pass
-
+except ImportError:
+    try:
+        from attention import attention_cuda
+    except ImportError:
+        print("Cannot import attention_cuda for MTR. Please check the cuda compilation.")
+        pass
 """ Attention computation code v2."""
 
 
