@@ -2,7 +2,7 @@
 
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/unitraj-a-unified-framework-for-scalable/trajectory-prediction-on-nuscenes)](https://paperswithcode.com/sota/trajectory-prediction-on-nuscenes?p=unitraj-a-unified-framework-for-scalable)
 
-[**Code**](https://github.com/vita-epfl/UniTraj) |
+[**Website**](https://www.epfl.ch/labs/vita/research/prediction/vehicle-trajectory-prediction/unitraj-a-unified-framework-for-scalable-vehicle-trajectory-prediction/) |
 [**Paper**](https://arxiv.org/pdf/2403.15098.pdf)
 
 **A Unified Framework for Scalable Vehicle Trajectory Prediction**
