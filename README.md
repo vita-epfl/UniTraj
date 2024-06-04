@@ -121,14 +121,15 @@ Please refer to config.yaml and method/autobot.yaml for more details.
 2. Create a new model class in `unitraj/model/` folder, for example, `unitraj/model/lanegcn.py`, and inherit from
    pl.LightningModule
 
-### Batch Data Format
+## Dataset Structure
 
-The default batch data format is:
+### Scenario Metadata
 
-For trajectory input:
-``obj_trajs [num_centered_obj, num_surrounding_objs, past_time_steps, num_attribute]
-``
+- **scenario_id**: Unique scenario ID representing a traffic scenario.
 
+### Object Trajectories
+
+- **obj_trajs**: Historical trajectories of objects with the following attributes:
 ``
 [0:3] position (x, y, z)  
 [3:6] size (l, w, h)
@@ -138,18 +139,48 @@ For trajectory input:
 [35:37] vx,vy
 [37:39] ax,ay
 ``
+- **obj_trajs_mask**: Valid mask for `obj_trajs`.
+- **track_index_to_predict**: Index indicating which trajectory should be used as the training sample (provided by the official dataset).
+- **obj_trajs_pos**: The first 3 dimensions of `obj_trajs` representing the x, y, and z coordinates of the objects.
+- **obj_trajs_last_pos**: The x, y, and z coordinates of the last frame in the historical object trajectories.
 
-For map input:
-``
-map_polylines [num_centered_obj, num_surrounding_lines, max_points_per_lane, num_attribute=29]
-``
+### Centered Objects
 
-``
-[0:3] position (x, y, z)  
-[3:6] direction (x, y, z)
-[6:9] previous point position (x,y,z)
-[9:29] lane type onehot encoding
-``
+- **center_objects_world**: World coordinates of the centered objects (used as the training sample).
+- **center_objects_id**: ID of the centered objects.
+- **center_objects_type**: Type of centered objects:
+  - 1: Vehicle
+  - 2: Pedestrian
+  - 3: Cyclist
+
+### Map Information
+
+- **map_center**: World coordinates of the map center.
+- **map_polylines**: Polylines representing the map with the following attributes:
+  - `[0:3]`: Position (x, y, z)
+  - `[3:6]`: Direction (x, y, z)
+  - `[6:9]`: Previous point position (x, y, z)
+  - `[9:29]`: Lane type one-hot encoding
+- **map_polylines_mask**: Valid mask for `map_polylines`.
+- **map_polylines_center**: Center point of each map polyline.
+
+### Future State Predictions
+
+- **obj_trajs_future_state**: Future state of all the objects.
+- **obj_trajs_future_mask**: Valid mask for `obj_trajs_future_state`.
+
+### Ground Truth Data
+
+- **center_gt_trajs**: Ground truth trajectories of centered objects, including x, y, vx, and vy coordinates.
+- **center_gt_trajs_mask**: Valid mask for `center_gt_trajs`.
+- **center_gt_final_valid_idx**: Final valid index of the `center_gt_trajs`.
+- **center_gt_trajs_src**: Ground truth trajectories in world coordinates.
+
+### Additional Metadata
+
+- **dataset_name**: Name of the dataset (e.g., Waymo, AV2, nuScenes).
+- **kalman_difficulty**: Kalman filter difficulty level of the centered object.
+- **trajectory_type**: Type of trajectory (e.g., straight, turn right, turn left).
 
 [//]: # (## Training on RCP)
 
