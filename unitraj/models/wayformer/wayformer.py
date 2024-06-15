@@ -81,7 +81,7 @@ class Wayformer(BaseModel):
 
         self.output_model = nn.Sequential(init_(nn.Linear(self.d_k, 5 * self.T)))
 
-        self.relu = nn.ReLU(inplace=True)
+        self.selu = nn.SELU(inplace=True)
 
         self.criterion = Criterion(self.config)
 
@@ -126,10 +126,10 @@ class Wayformer(BaseModel):
         # Encode all input observations (k_attr --> d_k)
         ego_tensor, _agents_tensor, opps_masks_agents, env_masks = self.process_observations(ego_in, agents_in)
         agents_tensor = torch.cat((ego_tensor.unsqueeze(2), _agents_tensor), dim=2)
-        agents_emb = self.relu(self.agents_dynamic_encoder(agents_tensor))
+        agents_emb = self.selu(self.agents_dynamic_encoder(agents_tensor))
         agents_emb = (agents_emb + self.agents_positional_embedding[:, :,
                                    :num_agents] + self.temporal_positional_embedding).view(B, -1, self.d_k)
-        road_pts_feats = self.relu(self.road_pts_lin(roads[:, :self.max_num_roads, :, :self.map_attr]).view(B, -1,
+        road_pts_feats = self.selu(self.road_pts_lin(roads[:, :self.max_num_roads, :, :self.map_attr]).view(B, -1,
                                                                                                             self.d_k)) + self.map_positional_embedding
         mixed_input_features = torch.concat([agents_emb, road_pts_feats], dim=1)
         opps_masks_roads = (1.0 - roads[:, :self.max_num_roads, :, -1]).to(torch.bool)
@@ -142,11 +142,11 @@ class Wayformer(BaseModel):
 
         out_seq = self.perceiver_decoder(context)
 
-        out_dists = self.output_model(out_seq).reshape(B, self.num_queries_dec, self.T, -1)
+        out_dists = self.output_model(out_seq[:, :self.c]).reshape(B, self.c, self.T, -1)
 
         # Mode prediction
 
-        mode_probs = F.softmax(self.prob_predictor(out_seq).reshape(B, self.num_queries_dec), dim=1)
+        mode_probs = F.softmax(self.prob_predictor(out_seq[:, :self.c]).reshape(B, self.c), dim=1)
 
         # return  [c, T, B, 5], [B, c]
         output = {}
@@ -183,77 +183,13 @@ class Wayformer(BaseModel):
         output['dataset_name'] = inputs['dataset_name']
         return output, loss
 
-    def validation_step(self, batch, batch_idx):
-        prediction, loss = self.forward(batch)
-
-        prediction['predicted_trajectory'], prediction['predicted_probability'], selected_idxs = self.batch_nms(
-            pred_trajs=prediction['predicted_trajectory'], pred_scores=prediction['predicted_probability'],
-            dist_thresh=2.5,
-            num_ret_modes=self.c
-        )
-        prediction['predicted_probability'] = F.softmax(prediction['predicted_probability'], dim=1)
-        self.compute_official_evaluation(batch, prediction)
-        self.log_info(batch, prediction, status='val')
-        return loss
-
     def configure_optimizers(self):
         optimizer = optim.AdamW(self.parameters(), lr=self.config['learning_rate'], eps=0.0001)
 
         scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.0002, steps_per_epoch=1, epochs=150,
-                                                        pct_start=0.04, div_factor=25.0, final_div_factor=100,
-                                                        anneal_strategy='linear')
+                                                        pct_start=0.02, div_factor=100.0, final_div_factor=10)
 
         return [optimizer], [scheduler]
-
-    def batch_nms(self, pred_trajs, pred_scores, dist_thresh, num_ret_modes=6):
-        """
-
-        Args:
-            pred_trajs (batch_size, num_modes, num_timestamps, 7)
-            pred_scores (batch_size, num_modes):
-            dist_thresh (float):
-            num_ret_modes (int, optional): Defaults to 6.
-
-        Returns:
-            ret_trajs (batch_size, num_ret_modes, num_timestamps, 5)
-            ret_scores (batch_size, num_ret_modes)
-            ret_idxs (batch_size, num_ret_modes)
-        """
-        batch_size, num_modes, num_timestamps, num_feat_dim = pred_trajs.shape
-
-        sorted_idxs = pred_scores.argsort(dim=-1, descending=True)
-        bs_idxs_full = torch.arange(batch_size).type_as(sorted_idxs)[:, None].repeat(1, num_modes)
-        sorted_pred_scores = pred_scores[bs_idxs_full, sorted_idxs]
-        sorted_pred_trajs = pred_trajs[bs_idxs_full, sorted_idxs]  # (batch_size, num_modes, num_timestamps, 7)
-        sorted_pred_goals = sorted_pred_trajs[:, :, -1, :]  # (batch_size, num_modes, 7)
-
-        dist = (sorted_pred_goals[:, :, None, 0:2] - sorted_pred_goals[:, None, :, 0:2]).norm(dim=-1)
-        point_cover_mask = (dist < dist_thresh)
-
-        point_val = sorted_pred_scores.clone()  # (batch_size, N)
-        point_val_selected = torch.zeros_like(point_val)  # (batch_size, N)
-
-        ret_idxs = sorted_idxs.new_zeros(batch_size, num_ret_modes).long()
-        ret_trajs = sorted_pred_trajs.new_zeros(batch_size, num_ret_modes, num_timestamps, num_feat_dim)
-        ret_scores = sorted_pred_trajs.new_zeros(batch_size, num_ret_modes)
-        bs_idxs = torch.arange(batch_size).type_as(ret_idxs)
-
-        for k in range(num_ret_modes):
-            cur_idx = point_val.argmax(dim=-1)  # (batch_size)
-            ret_idxs[:, k] = cur_idx
-
-            new_cover_mask = point_cover_mask[bs_idxs, cur_idx]  # (batch_size, N)
-            point_val = point_val * (~new_cover_mask).float()  # (batch_size, N)
-            point_val_selected[bs_idxs, cur_idx] = -1
-            point_val += point_val_selected
-
-            ret_trajs[:, k] = sorted_pred_trajs[bs_idxs, cur_idx]
-            ret_scores[:, k] = sorted_pred_scores[bs_idxs, cur_idx]
-
-        bs_idxs = torch.arange(batch_size).type_as(sorted_idxs)[:, None].repeat(1, num_ret_modes)
-
-        ret_idxs = sorted_idxs[bs_idxs, ret_idxs]
-        return ret_trajs, ret_scores, ret_idxs
 
 
 class Criterion(nn.Module):
@@ -329,3 +265,8 @@ class Criterion(nn.Module):
         loss_cls = (F.cross_entropy(input=pred_scores, target=nearest_mode_idxs, reduction='none'))
 
         return (reg_loss + loss_cls).mean()
+
+
+
+
+
