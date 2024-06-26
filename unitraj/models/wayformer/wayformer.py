@@ -146,7 +146,7 @@ class Wayformer(BaseModel):
 
         # Mode prediction
 
-        mode_probs = F.softmax(self.prob_predictor(out_seq[:, :self.c]).reshape(B, self.c), dim=1)
+        mode_probs = self.prob_predictor(out_seq[:, :self.c]).reshape(B, self.c)
 
         # return  [c, T, B, 5], [B, c]
         output = {}
@@ -181,6 +181,7 @@ class Wayformer(BaseModel):
                                  dim=-1)
         loss = self.criterion(output, ground_truth, inputs['center_gt_final_valid_idx'])
         output['dataset_name'] = inputs['dataset_name']
+        output['predicted_probability'] = F.softmax(output['predicted_probability'], dim=-1)
         return output, loss
 
     def configure_optimizers(self):
