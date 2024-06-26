@@ -193,7 +193,7 @@ class BaseModel(pl.LightningModule):
         best_fde_idx = np.argmin(fde, axis=-1)
         predicted_prob = predicted_prob[np.arange(bs), best_fde_idx]
         miss_rate = (minfde > 2.0)
-        brier_fde = minfde + (1 - predicted_prob)
+        brier_fde = minfde + np.square(1 - predicted_prob)
 
         loss_dict = {
             'minADE6': minade,
