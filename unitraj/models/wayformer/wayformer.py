@@ -71,9 +71,9 @@ class Wayformer(BaseModel):
             requires_grad=True
         )
 
-        self.map_positional_embedding = nn.parameter.Parameter(
-            torch.zeros((1, self.max_points_per_lane * self.max_num_roads, self.d_k)), requires_grad=True
-        )
+        # self.map_positional_embedding = nn.parameter.Parameter(
+        #     torch.zeros((1, self.max_points_per_lane * self.max_num_roads, self.d_k)), requires_grad=True
+        # )
 
         self.perceiver_decoder = PerceiverDecoder(output_query_provider, self.d_k)
 
@@ -130,11 +130,11 @@ class Wayformer(BaseModel):
         agents_emb = (agents_emb + self.agents_positional_embedding[:, :,
                                    :num_agents] + self.temporal_positional_embedding).view(B, -1, self.d_k)
         road_pts_feats = self.selu(self.road_pts_lin(roads[:, :self.max_num_roads, :, :self.map_attr]).view(B, -1,
-                                                                                                            self.d_k)) + self.map_positional_embedding
+                                                                                                            self.d_k))# + self.map_positional_embedding
         mixed_input_features = torch.concat([agents_emb, road_pts_feats], dim=1)
         opps_masks_roads = (1.0 - roads[:, :self.max_num_roads, :, -1]).to(torch.bool)
         mixed_input_masks = torch.concat([opps_masks_agents.view(B, -1), opps_masks_roads.view(B, -1)], dim=1)
-        # Process through Wazformer's encoder
+        # Process through Wayformer's encoder
 
         context = self.perceiver_encoder(mixed_input_features, mixed_input_masks)
 
