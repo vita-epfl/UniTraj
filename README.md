@@ -1,4 +1,5 @@
-![Demo](https://github.com/yourusername/yourrepository/raw/main/images/demo.gif)
+![Demo](https://github.com/vita-epfl/UniTraj/blob/main/docs/assets/unitraj.gif)
+
 # UniTraj
 
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/unitraj-a-unified-framework-for-scalable/trajectory-prediction-on-nuscenes)](https://paperswithcode.com/sota/trajectory-prediction-on-nuscenes?p=unitraj-a-unified-framework-for-scalable)
