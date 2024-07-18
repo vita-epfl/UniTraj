@@ -19,6 +19,16 @@ and [WandB](https://wandb.ai/site), the framework is easy to configure, train an
 
 ![system](docs/assets/support.png)
 
+## 📰 News & Updates
+
+### July 2024
+- 🚀 Accepted to ECCV 2024! 
+
+### March 2024
+- 🌐 Launched the official [UniTraj Website](https://www.epfl.ch/labs/vita/research/prediction/vehicle-trajectory-prediction/unitraj-a-unified-framework-for-scalable-vehicle-trajectory-prediction/).
+- 📝 Published UniTraj in [Arxiv](https://arxiv.org/pdf/2403.15098.pdf).
+
+
 ## 🛠 Quick Start
 
 0. Create a new conda environment
