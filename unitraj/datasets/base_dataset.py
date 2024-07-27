@@ -221,13 +221,13 @@ class BaseDataset(Dataset):
         polylines = []
         point_cnt = 0
         for k, v in map_feat.items():
-            type = polyline_type[v['type']]
-            if type == 0:
+            polyline_type_ = polyline_type[v['type']]
+            if polyline_type_ == 0:
                 continue
 
             cur_info = {'id': k}
             cur_info['type'] = v['type']
-            if type in [1, 2, 3]:
+            if polyline_type_ in [1, 2, 3]:
                 cur_info['speed_limit_mph'] = v.get('speed_limit_mph', None)
                 cur_info['interpolating'] = v.get('interpolating', None)
                 cur_info['entry_lanes'] = v.get('entry_lanes', None)
@@ -250,24 +250,24 @@ class BaseDataset(Dataset):
                 polyline = v['polyline']
                 polyline = interpolate_polyline(polyline)
                 map_infos['lane'].append(cur_info)
-            elif type in [6, 7, 8, 9, 10, 11, 12, 13]:
+            elif polyline_type_ in [6, 7, 8, 9, 10, 11, 12, 13]:
                 polyline = v['polyline']
                 polyline = interpolate_polyline(polyline)
                 map_infos['road_line'].append(cur_info)
-            elif type in [15, 16]:
+            elif polyline_type_ in [15, 16]:
                 polyline = v['polyline']
                 polyline = interpolate_polyline(polyline)
                 cur_info['type'] = 7
                 map_infos['road_line'].append(cur_info)
-            elif type in [17]:
+            elif polyline_type_ in [17]:
                 cur_info['lane_ids'] = v['lane']
                 cur_info['position'] = v['position']
                 map_infos['stop_sign'].append(cur_info)
                 polyline = v['position'][np.newaxis]
-            elif type in [18]:
+            elif polyline_type_ in [18]:
                 map_infos['crosswalk'].append(cur_info)
                 polyline = v['polygon']
-            elif type in [19]:
+            elif polyline_type_ in [19]:
                 map_infos['crosswalk'].append(cur_info)
                 polyline = v['polygon']
             if polyline.shape[-1] == 2:
@@ -275,7 +275,7 @@ class BaseDataset(Dataset):
             try:
                 cur_polyline_dir = get_polyline_dir(polyline)
                 type_array = np.zeros([polyline.shape[0], 1])
-                type_array[:] = type
+                type_array[:] = polyline_type_
                 cur_polyline = np.concatenate((polyline, cur_polyline_dir, type_array), axis=-1)
             except:
                 cur_polyline = np.zeros((0, 7), dtype=np.float32)
@@ -299,7 +299,10 @@ class BaseDataset(Dataset):
             for cur_signal in v['state']['object_state']:  # (num_observed_signals)
                 lane_id.append(str(v['lane']))
                 state.append(cur_signal)
-                stop_point.append(v['stop_point'].tolist())
+                if type(v['stop_point']) == list:
+                    stop_point.append(v['stop_point'])
+                else:
+                    stop_point.append(v['stop_point'].tolist())
             # lane_id = lane_id[::sample_inverval]
             # state = state[::sample_inverval]
             # stop_point = stop_point[::sample_inverval]
