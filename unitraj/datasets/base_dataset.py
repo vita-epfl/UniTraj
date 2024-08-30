@@ -251,7 +251,10 @@ class BaseDataset(Dataset):
                 polyline = interpolate_polyline(polyline)
                 map_infos['lane'].append(cur_info)
             elif polyline_type_ in [6, 7, 8, 9, 10, 11, 12, 13]:
-                polyline = v['polyline']
+                try:
+                    polyline = v['polyline']
+                except:
+                    polyline = v['polygon']
                 polyline = interpolate_polyline(polyline)
                 map_infos['road_line'].append(cur_info)
             elif polyline_type_ in [15, 16]:

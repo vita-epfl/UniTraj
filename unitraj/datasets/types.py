@@ -41,11 +41,12 @@ polyline_type = {
     # for lane
     MetaDriveType.LANE_FREEWAY: 1,
     MetaDriveType.LANE_SURFACE_STREET: 2,
+    'LANE_SURFACE_UNSTRUCTURE': 2,
     MetaDriveType.LANE_BIKE_LANE: 3,
-
     # for roadline
     MetaDriveType.LINE_BROKEN_SINGLE_WHITE: 6,
     MetaDriveType.LINE_SOLID_SINGLE_WHITE: 7,
+    'ROAD_EDGE_SIDEWALK': 7,
     MetaDriveType.LINE_SOLID_DOUBLE_WHITE: 8,
     MetaDriveType.LINE_BROKEN_SINGLE_YELLOW: 9,
     MetaDriveType.LINE_BROKEN_DOUBLE_YELLOW: 10,
