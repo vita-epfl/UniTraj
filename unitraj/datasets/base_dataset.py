@@ -209,7 +209,7 @@ class BaseDataset(Dataset):
         track_infos['trajs'] = np.stack(track_infos['trajs'], axis=0)
         # scenario['metadata']['ts'] = scenario['metadata']['ts'][::sample_inverval]
         track_infos['trajs'][..., -1] *= frequency_mask[np.newaxis]
-        scenario['metadata']['ts'] = scenario['metadata']['ts'][past_pos:end_pos]  # ts will offset if past_pos is not 0
+        scenario['metadata']['ts'] = scenario['metadata']['ts'][:total_steps]
 
         # x,y,z,type
         map_infos = {
