@@ -48,6 +48,7 @@ class BaseDataset(Dataset):
 
             data_usage_this_dataset = self.config['max_data_num'][cnt]
             data_usage_this_dataset = int(data_usage_this_dataset / self.data_chunk_size)
+            past_pos_this_dataset = self.config['past_pos'][cnt]
             if self.config['use_cache'] or is_ddp():
                 file_list = self.get_data_list(data_usage_this_dataset)
             else:
@@ -66,7 +67,7 @@ class BaseDataset(Dataset):
 
                     data_splits = np.array_split(summary_list, process_num)
 
-                    data_splits = [(data_path, mapping, list(data_splits[i]), dataset_name) for i in range(process_num)]
+                    data_splits = [(data_path, mapping, list(data_splits[i]), dataset_name, past_pos_this_dataset) for i in range(process_num)]
                     # save the data_splits in a tmp directory
                     os.makedirs('tmp', exist_ok=True)
                     for i in range(process_num):
@@ -113,7 +114,7 @@ class BaseDataset(Dataset):
         with open(os.path.join('tmp', '{}.pkl'.format(worker_index)), 'rb') as f:
             data_chunk = pickle.load(f)
         file_list = {}
-        data_path, mapping, data_list, dataset_name = data_chunk
+        data_path, mapping, data_list, dataset_name, past_pos = data_chunk
         output_buffer = []
         save_cnt = 0
         for cnt, file_name in enumerate(data_list):
@@ -123,7 +124,7 @@ class BaseDataset(Dataset):
             scenario = read_scenario(data_path, mapping, file_name)
 
             try:
-                output = self.preprocess(scenario)
+                output = self.preprocess(scenario, past_pos)
 
                 output = self.process(output)
 
@@ -165,7 +166,7 @@ class BaseDataset(Dataset):
 
         return file_list
 
-    def preprocess(self, scenario):
+    def preprocess(self, scenario, past_pos):
 
         traffic_lights = scenario['dynamic_map_states']
         tracks = scenario['tracks']
@@ -174,6 +175,7 @@ class BaseDataset(Dataset):
         past_length = self.config['past_len']
         future_length = self.config['future_len']
         total_steps = past_length + future_length
+        end_pos = past_pos + total_steps
         trajectory_sample_interval = self.config['trajectory_sample_interval']
         frequency_mask = generate_mask(past_length - 1, total_steps, trajectory_sample_interval)
 
@@ -194,11 +196,11 @@ class BaseDataset(Dataset):
             # type, x,y,z,l,w,h,heading,vx,vy,valid
             all_state = np.concatenate(all_state, axis=-1)
             # all_state = all_state[::sample_inverval]
-            if all_state.shape[0] < total_steps:
-                all_state = np.pad(all_state, ((total_steps - all_state.shape[0], 0), (0, 0)))
-            all_state = all_state[:total_steps]
+            if all_state.shape[0] < end_pos:
+                all_state = np.pad(all_state, ((end_pos - all_state.shape[0], 0), (0, 0)))
+            all_state = all_state[past_pos:end_pos]
 
-            assert all_state.shape[0] >= total_steps, f'Error: {all_state.shape[0]} < {total_steps}'
+            assert all_state.shape[0] == total_steps, f'Error: {all_state.shape[0]} != {total_steps}'
 
             track_infos['object_id'].append(k)
             track_infos['object_type'].append(object_type[v['type']])
@@ -345,6 +347,8 @@ class BaseDataset(Dataset):
         ret['tracks_to_predict'] = tracks_to_predict
 
         ret['map_center'] = scenario['metadata'].get('map_center', np.zeros(3))[np.newaxis]
+
+        ret['track_length'] = total_steps
         return ret
 
     def process(self, internal_format):
