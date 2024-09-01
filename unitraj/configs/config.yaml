@@ -10,6 +10,7 @@ load_num_workers: 0 # number of workers for loading data
 train_data_path: [ "data_samples/nuscenes" ] # list of paths to the training data
 val_data_path: [ "data_samples/nuscenes" ] # list of paths to the validation data
 max_data_num: [ 1000 ] # maximum number of data for each training dataset
+past_pos: [ 0 ] # history trajectory starts at this frame for each training dataset
 past_len: 21 # history trajectory length, 2.1s
 future_len: 60 # future trajectory length, 6s
 object_type: [ 'VEHICLE' ]#, 'PEDESTRIAN', 'CYCLIST'] # object types included in the training set
