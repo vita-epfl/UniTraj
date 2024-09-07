@@ -264,6 +264,7 @@ class BaseModel(pl.LightningModule):
 
         if status == 'val' and batch_idx == 0 and not self.config.debug:
             img = visualization.visualize_prediction(batch, prediction)
-            wandb.log({"prediction": [wandb.Image(img)]})
+            if self.local_rank == 0:
+                wandb.log({"prediction": [wandb.Image(img)]})
 
         return
