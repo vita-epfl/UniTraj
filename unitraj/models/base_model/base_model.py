@@ -262,7 +262,7 @@ class BaseModel(pl.LightningModule):
         for k, v in loss_dict.items():
             self.log(status + "/" + k, v, on_step=False, on_epoch=True, sync_dist=True, batch_size=size_dict[k])
 
-        if status == 'val' and batch_idx == 0 and not self.config.debug:
+        if self.local_rank == 0 and status == 'val' and batch_idx == 0:
             img = visualization.visualize_prediction(batch, prediction)
             wandb.log({"prediction": [wandb.Image(img)]})
 
