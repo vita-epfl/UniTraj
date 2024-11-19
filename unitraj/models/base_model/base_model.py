@@ -72,6 +72,10 @@ class BaseModel(pl.LightningModule):
             json.dump(self.pred_dicts, open(os.path.join('submission', "evalai_submission.json"), "w"))
             metric_results = self.compute_metrics_nuscenes(self.pred_dicts)
             print('\n', metric_results)
+            
+        elif self.config.get('eval_argoverse2', False):
+            metric_results = self.compute_metrics_av2(self.pred_dicts)
+            
         self.pred_dicts = []
 
     def configure_optimizers(self):
@@ -100,6 +104,27 @@ class BaseModel(pl.LightningModule):
 
         return metric_result_str, metric_results
 
+    def compute_metrics_av2(self, pred_dicts):
+        from unitraj.models.base_model.av2_eval import argoverse2_evaluation
+        try:
+            num_modes_for_eval = pred_dicts[0]['pred_trajs'].shape[0]
+        except:
+            num_modes_for_eval = 6
+        metric_results = argoverse2_evaluation(pred_dicts=pred_dicts,
+                                               num_modes_for_eval=num_modes_for_eval)
+        self.log('val/av2_official_minADE6', metric_results['min_ADE'], prog_bar=True, on_step=False, on_epoch=True)
+        self.log('val/av2_official_minFDE6', metric_results['min_FDE'], prog_bar=True, on_step=False, on_epoch=True)
+        self.log('val/av2_official_brier_minADE', metric_results['brier_min_ADE'], prog_bar=True, on_step=False, on_epoch=True)
+        self.log('val/av2_official_brier_minFDE', metric_results['brier_min_FDE'], prog_bar=True, on_step=False, on_epoch=True)
+        self.log('val/av2_official_miss_rate', metric_results['miss_rate'], prog_bar=True, on_step=False, on_epoch=True)
+        
+        # metric_result_str = '\n'
+        # for key, value in metric_results.items():
+        #     metric_result_str += '%s: %.4f\n' % (key, value)
+        # metric_result_str += '\n'
+        # print(metric_result_str)
+        return metric_results
+        
     def compute_official_evaluation(self, batch_dict, prediction):
         if self.config.get('eval_waymo', False):
 
@@ -164,6 +189,39 @@ class BaseModel(pl.LightningModule):
                     Prediction(instance=single_pred_dict["instance"], sample=single_pred_dict["sample"],
                                prediction=single_pred_dict["prediction"],
                                probabilities=single_pred_dict["probabilities"]).serialize())
+
+            self.pred_dicts += pred_dict_list
+        
+        elif self.config.get('eval_argoverse2', False):
+
+            input_dict = batch_dict['input_dict']
+            pred_scores = prediction['predicted_probability']
+            pred_trajs = prediction['predicted_trajectory']
+            center_objects_world = input_dict['center_objects_world'].type_as(pred_trajs)
+            num_center_objects, num_modes, num_timestamps, num_feat = pred_trajs.shape
+
+            pred_trajs_world = common_utils.rotate_points_along_z_tensor(
+                points=pred_trajs.reshape(num_center_objects, num_modes * num_timestamps, num_feat),
+                angle=center_objects_world[:, 6].reshape(num_center_objects)
+            ).reshape(num_center_objects, num_modes, num_timestamps, num_feat)
+            pred_trajs_world[:, :, :, 0:2] += center_objects_world[:, None, None, 0:2] + input_dict['map_center'][:,
+                                                                                         None, None, 0:2]
+
+            pred_dict_list = []
+
+            for bs_idx in range(batch_dict['batch_size']):
+                single_pred_dict = {
+                    'scenario_id': input_dict['scenario_id'][bs_idx],
+                    'pred_trajs': pred_trajs_world[bs_idx, :, :, 0:2].cpu().numpy(),
+                    'pred_scores': pred_scores[bs_idx, :].cpu().numpy(),
+                    'object_id': input_dict['center_objects_id'][bs_idx],
+                    'object_type': input_dict['center_objects_type'][bs_idx],
+                    'gt_trajs': input_dict['center_gt_trajs_src'][bs_idx].cpu().numpy(),
+                    'track_index_to_predict': input_dict['track_index_to_predict'][bs_idx].cpu().numpy()
+                }
+                pred_dict_list.append(single_pred_dict)
+
+            assert len(pred_dict_list) == batch_dict['batch_size']
 
             self.pred_dicts += pred_dict_list
 
