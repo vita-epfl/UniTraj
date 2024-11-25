@@ -15,19 +15,21 @@ from PIL import Image
 # visualize the map, the first dimension is the lane number, the second dimension is the x,y,theta of the lane
 # you can discard the last dimension of all the elements
 
-def check_loaded_data(data, index=0):
+def check_loaded_data(plt, data, index=0):
     agents = np.concatenate([data['obj_trajs'][..., :2], data['obj_trajs_future_state'][..., :2]], axis=-2)
     map = data['map_polylines']
 
-    agents = agents[index]
-    map = map[index]
-    ego_index = data['track_index_to_predict'][index]
-    ego_agent = agents[ego_index]
-
-    fig, ax = plt.subplots()
+    if len(agents.shape) == 4:
+        agents = agents[index]
+        map = map[index]
+        ego_index = data['track_index_to_predict'][index]
+        ego_agent = agents[ego_index]
+    else:
+        ego_index = data['track_index_to_predict']
+        ego_agent = agents[ego_index]
 
     def draw_line_with_mask(point1, point2, color, line_width=4):
-        ax.plot([point1[0], point2[0]], [point1[1], point2[1]], linewidth=line_width, color=color)
+        plt.plot([point1[0], point2[0]], [point1[1], point2[1]], linewidth=line_width, color=color)
 
     def interpolate_color(t, total_t):
         # Start is green, end is blue
@@ -37,15 +39,13 @@ def check_loaded_data(data, index=0):
         # Start is red, end is blue
         return (1 - t / total_t, 0, t / total_t)
 
-    # Function to draw lines with a validity check
-
     # Plot the map with mask check
     for lane in map:
-        if lane[0, -3] in [1, 2, 3]:
-            continue
+        # map_one_hot = lane[0, -20:]
+        # if np.argmax(map_one_hot) in [1, 2, 3]:
+        #     continue
         for i in range(len(lane) - 1):
-            if lane[i, -3] > 0:
-                draw_line_with_mask(lane[i, :2], lane[i, -2:], color='grey', line_width=1)
+            draw_line_with_mask(lane[i, :2], lane[i, 6:8], color='grey', line_width=1)
 
     # Function to draw trajectories
     def draw_trajectory(trajectory, line_width, ego=False):
@@ -64,30 +64,130 @@ def check_loaded_data(data, index=0):
     for i in range(agents.shape[0]):
         draw_trajectory(agents[i], line_width=2)
     draw_trajectory(ego_agent, line_width=2, ego=True)
+
     # Set labels, limits, and other properties
-    vis_range = 100
-    # ax.legend()
-    ax.set_xlim(-vis_range + 30, vis_range + 30)
-    ax.set_ylim(-vis_range, vis_range)
+    #vis_range = 100
+    # plt.xlim(-vis_range + 30, vis_range + 30)
+    # plt.ylim(-vis_range, vis_range)
+   # plt.gca().set_aspect('equal', adjustable='box')
+    plt.axis('off')
+    plt.axis('equal')
+    #plt.tight_layout()
+
+    return plt
+
+
+def visualize_batch_data(ax, data):
+    def decode_obj_trajs(obj_trajs):
+        obj_trajs_xy = obj_trajs[..., :2]
+        obj_lw = obj_trajs[...,-1, 3:5]
+        obj_type_onehot = obj_trajs[...,-1, 6:9]
+        obj_type = np.argmax(obj_type_onehot, axis=-1)
+        obj_heading_encoding = obj_trajs[...,-1, 33:35]
+        return obj_trajs_xy, obj_lw, obj_type, obj_heading_encoding
+    def decode_map(map):
+        map_xy = map[..., :2]
+        map_type = map[...,0, 9:29]
+        map_type = np.argmax(map_type, axis=-1)
+        return map_xy, map_type
+
+    def plot_objects(obj_xy, obj_lw, obj_heading, obj_mask):
+        # 在已有的ax对象上进行绘制
+        for i in range(len(obj_lw)):
+            if obj_mask[i]:
+                # 获取对象的长和宽
+                length, width = obj_lw[i]
+
+                # 通过sin和cos计算旋转角度
+                sin_angle, cos_angle = obj_heading[i]
+                angle = np.arctan2(sin_angle, cos_angle)  # 转换为角度（弧度）
+
+                # 获取对象的中心位置
+                x, y = obj_xy[i]
+
+                # 创建旋转矩形对象
+                rect = plt.Rectangle((-length / 2, -width / 2), length, width, angle=0,
+                                     facecolor='none', edgecolor='grey', linewidth=1)
+
+                # 使用转换矩阵将矩形旋转并平移到对象的中心位置
+                t = ax.transData
+                # 先将矩形平移到中心位置，然后旋转
+                rot = plt.matplotlib.transforms.Affine2D().rotate_around(0, 0, angle).translate(x, y) + t
+                rect.set_transform(rot)
+
+                # 添加矩形到现有ax中
+                ax.add_patch(rect)
+    def draw_trajectory(trajectory, line_width, ego=False):
+        def interpolate_color(start_color, end_color, t, total_t):
+            """根据 t 和 total_t 插值计算颜色."""
+            return [(1 - t / total_t) * start + (t / total_t) * end for start, end in zip(start_color, end_color)]
+
+        def draw_line_with_mask(point1, point2, color, line_width=4):
+            ax.plot([point1[0], point2[0]], [point1[1], point2[1]], linewidth=line_width, color=color,alpha=0.5)
+        total_t = len(trajectory)
+        for t in range(total_t - 1):
+            if ego:
+                # 天蓝色渐变：从深蓝到浅蓝
+                start_color = (0, 0, 0.5)  # 深蓝色
+                end_color = (0.53, 0.81, 0.98)  # 浅蓝色
+            else:
+                # 草绿色渐变：从深绿到浅绿
+                start_color = (0, 0.5, 0)  # 深绿色
+                end_color = (0.56, 0.93, 0.56)  # 浅绿色
+
+            # 计算当前时间步的颜色
+            color = interpolate_color(start_color, end_color, t, total_t)
+
+            if trajectory[t, 0] and trajectory[t + 1, 0]:
+                draw_line_with_mask(trajectory[t], trajectory[t + 1], color=color, line_width=line_width)
+
+    obj_trajs = data['obj_trajs']
+    map = data['map_polylines']
+
+    obj_trajs_xy, obj_lw, obj_type, obj_heading = decode_obj_trajs(obj_trajs)
+    obj_trajs_future_state = data['obj_trajs_future_state'][...,:2]
+    all_traj = np.concatenate([obj_trajs_xy, obj_trajs_future_state], axis=-2)
+
+    for i in range(obj_trajs.shape[0]):
+        if i == data['track_index_to_predict']:
+            ego = True
+        else:
+            ego = False
+        draw_trajectory(all_traj[i], line_width=3,ego=ego)
+
+    map_xy, map_type = decode_map(map)
+    obj_mask = data['obj_trajs_mask']
+    plot_objects(obj_trajs_xy[:,-1],obj_lw, obj_heading, obj_mask[:,-1])
+
+    for indx, type in enumerate(map_type):
+        lane = map_xy[indx]
+        if type == 0:
+            continue
+        if type in [1, 2, 3]:
+            # 使用灰色虚线表示中心线
+            color = 'grey'
+            linestyle = 'dotted'
+            linewidth = 1
+        else:
+            color = 'grey'
+            linestyle = '-'
+            linewidth = 0.2
+
+        # 绘制线条
+        for i in range(len(lane) - 1):
+            if lane[i, 0] and lane[i + 1, 0]:
+                ax.plot([lane[i, 0], lane[i + 1, 0]], [lane[i, 1], lane[i + 1, 1]],
+                        linewidth=linewidth, color=color, linestyle=linestyle)
+
+    # 设置坐标轴比例和范围
+    vis_range = 35
     ax.set_aspect('equal')
     ax.axis('off')
-    plt.tight_layout()
-
-    # As defined in the common_utils.py file
-    # traj_type = { 0: "stationary", 1: "straight", 2: "straight_right",
-    #         3: "straight_left", 4: "right_u_turn", 5: "right_turn",
-    #         6: "left_u_turn", 7: "left_turn" }
-    #
-    # kalman_2s, kalman_4s, kalman_6s = list(data["kalman_difficulty"][index])
-    #
-    # plt.title("%s -- Idx: %d -- Type: %s  -- kalman@(2s,4s,6s): %.1f %.1f %.1f" % (1, index, traj_type[data["trajectory_type"][0]], kalman_2s, kalman_4s, kalman_6s))
-    # # Return the axes object
-    # plt.show()
-
-    # Return the PIL image
-    return plt
-    # return ax
-
+    ax.grid(True)
+    ax.set_xlim(-vis_range, vis_range)
+    ax.set_ylim(-vis_range, vis_range)
+    #plt.show()
+    return ax
 
 def concatenate_images(images, rows, cols):
     # Determine individual image size

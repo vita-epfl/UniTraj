@@ -20,14 +20,16 @@ and [WandB](https://wandb.ai/site), the framework is easy to configure, train an
 ![system](docs/assets/support.png)
 
 ## 📰 News & Updates
-
-### September 2024
+### Nov. 2024
+- Adding AV2 evaluation tools.
+- Using h5 format data cache for faster loader.
+### Sep. 2024
 - New website is live! Check it out [here](https://vita-epfl.github.io/UniTraj/).
 
-### July 2024
+### Jul. 2024
 - 🚀 Accepted to ECCV 2024! 
 
-### March 2024
+### Mar. 2024
 - 🌐 Launched the official [UniTraj Website](https://www.epfl.ch/labs/vita/research/prediction/vehicle-trajectory-prediction/unitraj-a-unified-framework-for-scalable-vehicle-trajectory-prediction/).
 - 📝 Published UniTraj in [Arxiv](https://arxiv.org/pdf/2403.15098.pdf).
 

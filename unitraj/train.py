@@ -24,8 +24,8 @@ def train(cfg):
     train_set = build_dataset(cfg)
     val_set = build_dataset(cfg, val=True)
 
-    train_batch_size = max(cfg.method['train_batch_size'] // len(cfg.devices) // train_set.data_chunk_size, 1)
-    eval_batch_size = max(cfg.method['eval_batch_size'] // len(cfg.devices) // val_set.data_chunk_size, 1)
+    train_batch_size = max(cfg.method['train_batch_size'] // len(cfg.devices),  1)
+    eval_batch_size = max(cfg.method['eval_batch_size'] // len(cfg.devices), 1)
 
     call_backs = []
 
@@ -34,6 +34,7 @@ def train(cfg):
         filename='{epoch}-{val/brier_fde:.2f}',
         save_top_k=1,
         mode='min',  # 'min' for loss/error, 'max' for accuracy
+        dirpath=f'./unitraj_ckpt/{cfg.exp_name}'
     )
 
     call_backs.append(checkpoint_callback)
@@ -59,7 +60,9 @@ def train(cfg):
 
     # automatically resume training
     if cfg.ckpt_path is None and not cfg.debug:
-        cfg.ckpt_path = find_latest_checkpoint(os.path.join('unitraj', cfg.exp_name, 'checkpoints'))
+        # Pattern to match all .ckpt files in the base_path recursively
+        search_pattern = os.path.join('./unitraj', cfg.exp_name, '**', '*.ckpt')
+        cfg.ckpt_path = find_latest_checkpoint(search_pattern)
 
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader, ckpt_path=cfg.ckpt_path)
 

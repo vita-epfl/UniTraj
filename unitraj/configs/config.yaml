@@ -9,7 +9,8 @@ devices: [ 0 ] # gpu ids
 load_num_workers: 0 # number of workers for loading data
 train_data_path: [ "data_samples/nuscenes" ] # list of paths to the training data
 val_data_path: [ "data_samples/nuscenes" ] # list of paths to the validation data
-max_data_num: [ 1000 ] # maximum number of data for each training dataset
+cache_path: "./cache"
+max_data_num: [ -1 ] # maximum number of data for each training dataset
 starting_frame: [ 0 ] # history trajectory starts at this frame for each training dataset
 past_len: 21 # history trajectory length, 2.1s
 future_len: 60 # future trajectory length, 6s
@@ -20,13 +21,14 @@ trajectory_sample_interval: 1 # sample interval for the trajectory
 only_train_on_ego: False # only train on AV
 center_offset_of_map: [ 30.0, 0.0 ] # center offset of the map
 use_cache: False # use cache for data loading
-overwrite_cache: True # overwrite existing cache
+overwrite_cache: False # overwrite existing cache
 store_data_in_memory: False # store data in memory
 
 # official evaluation
 nuscenes_dataroot: '/mnt/nas3_rcp_enac_u0900_vita_scratch/datasets/Prediction-Dataset/nuscenes/nuscenes_root'
 eval_nuscenes: False # whether to evaluate with nuscenes evaluation tool
 eval_waymo: False # whether to evaluate with waymo evaluation tool
+eval_argoverse2: False # whether to evaluate with argoverse evaluation tool
 
 defaults:
   - method: autobot

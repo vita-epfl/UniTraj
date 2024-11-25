@@ -3,7 +3,7 @@ import pickle
 import shutil
 from collections import defaultdict
 from multiprocessing import Pool
-
+import h5py
 import numpy as np
 import torch
 from metadrive.scenario.scenario_description import MetaDriveType
@@ -16,6 +16,7 @@ from unitraj.datasets.common_utils import get_polyline_dir, find_true_segments, 
     get_kalman_difficulty, get_trajectory_type, interpolate_polyline
 from unitraj.datasets.types import object_type, polyline_type
 from unitraj.utils.visualization import check_loaded_data
+from functools import lru_cache
 
 default_value = 0
 object_type = defaultdict(lambda: default_value, object_type)
@@ -32,7 +33,7 @@ class BaseDataset(Dataset):
         self.is_validation = is_validation
         self.config = config
         self.data_loaded_memory = []
-        self.data_chunk_size = 8
+        self.file_cache = {}
         self.load_data()
 
     def load_data(self):
@@ -43,11 +44,10 @@ class BaseDataset(Dataset):
             print('Loading training data...')
 
         for cnt, data_path in enumerate(self.data_path):
-            dataset_name = data_path.split('/')[-1]
-            self.cache_path = os.path.join(data_path, f'cache_{self.config.method.model_name}')
+            phase, dataset_name = data_path.split('/')[-2],data_path.split('/')[-1]
+            self.cache_path = os.path.join(self.config['cache_path'], dataset_name, phase)
 
             data_usage_this_dataset = self.config['max_data_num'][cnt]
-            data_usage_this_dataset = int(data_usage_this_dataset / self.data_chunk_size)
             self.starting_frame = self.config['starting_frame'][cnt]
             if self.config['use_cache'] or is_ddp():
                 file_list = self.get_data_list(data_usage_this_dataset)
@@ -62,7 +62,7 @@ class BaseDataset(Dataset):
                     if os.path.exists(self.cache_path):
                         shutil.rmtree(self.cache_path)
                     os.makedirs(self.cache_path, exist_ok=True)
-                    process_num = os.cpu_count() - 1
+                    process_num = os.cpu_count()//2
                     print('Using {} processes to load data...'.format(process_num))
 
                     data_splits = np.array_split(summary_list, process_num)
@@ -92,7 +92,7 @@ class BaseDataset(Dataset):
                         # randomly sample data_usage number of data
                         file_list = dict(data_list[:data_usage_this_dataset])
 
-            print('Loaded {} samples from {}'.format(len(file_list) * self.data_chunk_size, data_path))
+            print('Loaded {} samples from {}'.format(len(file_list), data_path))
             self.data_loaded.update(file_list)
 
             if self.config['store_data_in_memory']:
@@ -102,10 +102,6 @@ class BaseDataset(Dataset):
                         data = pickle.load(f)
                     self.data_loaded_memory.append(data)
                 print('Loaded {} data into memory'.format(len(self.data_loaded_memory)))
-        # if not self.is_validation:
-        # kalman_list = np.concatenate([x['kalman_difficulty'] for x in self.data_loaded.values()],0)[:,-1]
-        # sampled_list, index = self.sample_from_distribution(kalman_list, 100)
-        # self.data_loaded = {key: value for i, (key, value) in enumerate(self.data_loaded.items()) if i in index}
 
         self.data_loaded_keys = list(self.data_loaded.keys())
         print('Data loaded')
@@ -115,54 +111,41 @@ class BaseDataset(Dataset):
             data_chunk = pickle.load(f)
         file_list = {}
         data_path, mapping, data_list, dataset_name = data_chunk
-        output_buffer = []
-        save_cnt = 0
-        for cnt, file_name in enumerate(data_list):
-            if worker_index == 0 and cnt % max(int(len(data_list) / 10), 1) == 0:
-                print(f'{cnt}/{len(data_list)} data processed', flush=True)
+        hdf5_path = os.path.join(self.cache_path, f'{worker_index}.h5')
 
-            scenario = read_scenario(data_path, mapping, file_name)
+        with h5py.File(hdf5_path, 'w') as f:
+            for cnt, file_name in enumerate(data_list):
+                if worker_index == 0 and cnt % max(int(len(data_list) / 10), 1) == 0:
+                    print(f'{cnt}/{len(data_list)} data processed', flush=True)
+                scenario = read_scenario(data_path, mapping, file_name)
 
-            try:
-                output = self.preprocess(scenario)
+                try:
+                    output = self.preprocess(scenario)
 
-                output = self.process(output)
+                    output = self.process(output)
 
-                output = self.postprocess(output)
+                    output = self.postprocess(output)
 
-            except Exception as e:
-                print('Error: {} in {}'.format(e, file_name))
-                output = None
+                except Exception as e:
+                    print('Warning: {} in {}'.format(e, file_name))
+                    output = None
 
-            if output is None: continue
+                if output is None: continue
 
-            output_buffer += output
-
-            while len(output_buffer) >= self.data_chunk_size:
-                save_path = os.path.join(self.cache_path, f'{worker_index}_{save_cnt}.pkl')
-                to_save = output_buffer[:self.data_chunk_size]
-                output_buffer = output_buffer[self.data_chunk_size:]
-                with open(save_path, 'wb') as f:
-                    pickle.dump(to_save, f)
-                save_cnt += 1
-                file_info = {}
-                kalman_difficulty = np.stack([x['kalman_difficulty'] for x in to_save])
-                file_info['kalman_difficulty'] = kalman_difficulty
-                file_info['sample_num'] = len(to_save)
-                file_list[save_path] = file_info
-
-        save_path = os.path.join(self.cache_path, f'{worker_index}_{save_cnt}.pkl')
-        # if output_buffer is not a list
-        if isinstance(output_buffer, dict):
-            output_buffer = [output_buffer]
-        if len(output_buffer) > 0:
-            with open(save_path, 'wb') as f:
-                pickle.dump(output_buffer, f)
-            file_info = {}
-            kalman_difficulty = np.stack([x['kalman_difficulty'] for x in output_buffer])
-            file_info['kalman_difficulty'] = kalman_difficulty
-            file_info['sample_num'] = len(output_buffer)
-            file_list[save_path] = file_info
+                for i, record in enumerate(output):
+                    grp_name = dataset_name + '-' + str(worker_index) + '-' + str(cnt) + '-' + str(i)
+                    grp = f.create_group(grp_name)
+                    for key, value in record.items():
+                        if isinstance(value, str):
+                            value = np.bytes_(value)
+                        grp.create_dataset(key, data=value)
+                    file_info = {}
+                    kalman_difficulty = np.stack([x['kalman_difficulty'] for x in output])
+                    file_info['kalman_difficulty'] = kalman_difficulty
+                    file_info['h5_path'] = hdf5_path
+                    file_list[grp_name] = file_info
+                del scenario
+                del output
 
         return file_list
 
@@ -328,16 +311,25 @@ class BaseDataset(Dataset):
         ret['timestamps_seconds'] = ret.pop('ts')
         ret['current_time_index'] = self.config['past_len'] - 1
         ret['sdc_track_index'] = track_infos['object_id'].index(ret['sdc_id'])
-        if self.config['only_train_on_ego'] or ret.get('tracks_to_predict', None) is None:
+
+        if self.config['only_train_on_ego']:
             tracks_to_predict = {
                 'track_index': [ret['sdc_track_index']],
                 'difficulty': [0],
                 'object_type': [MetaDriveType.VEHICLE]
             }
+        elif ret.get('tracks_to_predict', None) is None:
+            filtered_tracks = self.trajectory_filter(ret)
+            sample_list = list(filtered_tracks.keys())
+            tracks_to_predict = {
+                'track_index': [track_infos['object_id'].index(id) for id in sample_list if
+                                id in track_infos['object_id']],
+                'object_type': [track_infos['object_type'][track_infos['object_id'].index(id)] for id in sample_list if
+                                id in track_infos['object_id']],
+            }
         else:
             sample_list = list(ret['tracks_to_predict'].keys())  # + ret.get('objects_of_interest', [])
             sample_list = list(set(sample_list))
-
             tracks_to_predict = {
                 'track_index': [track_infos['object_id'].index(id) for id in sample_list if
                                 id in track_infos['object_id']],
@@ -468,7 +460,7 @@ class BaseDataset(Dataset):
     def collate_fn(self, data_list):
         batch_list = []
         for batch in data_list:
-            batch_list += batch
+            batch_list.append(batch)
 
         batch_size = len(batch_list)
         key_to_list = {}
@@ -489,14 +481,29 @@ class BaseDataset(Dataset):
         return batch_dict
 
     def __len__(self):
-        return len(self.data_loaded)
+        return len(self.data_loaded_keys)
+
+    @lru_cache(maxsize=None)
+    def _get_file(self, file_path):
+        return h5py.File(file_path, 'r')
 
     def __getitem__(self, idx):
-        if self.config['store_data_in_memory']:
-            return self.data_loaded_memory[idx]
-        else:
-            with open(self.data_loaded_keys[idx], 'rb') as f:
-                return pickle.load(f)
+        file_key = self.data_loaded_keys[idx]
+        file_info = self.data_loaded[file_key]
+        file_path = file_info['h5_path']
+
+        if file_path not in self.file_cache:
+            self.file_cache[file_path] = self._get_file(file_path)
+
+        group = self.file_cache[file_path][file_key]
+        record = {k: group[k][()].decode('utf-8') if group[k].dtype.type == np.bytes_ else group[k][()] for k in group.keys()}
+
+        return record
+
+    def close_files(self):
+        for f in self.file_cache.values():
+            f.close()
+        self.file_cache.clear()
 
     def get_data_list(self, data_usage):
         file_list_path = os.path.join(self.cache_path, 'file_list.pkl')
@@ -969,6 +976,49 @@ class BaseDataset(Dataset):
                 f"Bin {range_}: Expected {distribution[i][1]}%, Actual {len(np.where(bin_indices[sampled_indices] == i)[0]) / len(sampled_indices) * 100}%")
 
         return sampled_array, sampled_indices
+
+    def trajectory_filter(self, data):
+
+        trajs = data['track_infos']['trajs']
+        current_idx = data['current_time_index']
+        obj_summary = data['object_summary']
+
+        tracks_to_preidct = {}
+        for idx,(k,v) in enumerate(obj_summary.items()):
+            type = v['type']
+            positions = trajs[idx, :, 0:2]
+            validity = trajs[idx, :, -1]
+            if type not in ['VEHICLE', 'PEDESTRIAN', 'CYCLIST']: continue
+            valid_ratio = v['valid_length']/v['track_length']
+            if valid_ratio < 0.5: continue
+            moving_distance = v['moving_distance']
+            if moving_distance < 2.0 and type=='VEHICLE': continue
+            is_valid_at_m = validity[current_idx]>0
+            if not is_valid_at_m: continue
+
+            # past_traj = positions[:current_idx+1, :]  # Time X (x,y)
+            # gt_future = positions[current_idx+1:, :]
+            # valid_past = count_valid_steps_past(validity[:current_idx+1])
+
+
+            future_mask =validity[current_idx+1:]
+            future_mask[-1]=0
+            idx_of_first_zero = np.where(future_mask == 0)[0]
+            idx_of_first_zero = len(future_mask) if len(idx_of_first_zero) == 0 else idx_of_first_zero[0]
+
+            #past_trajectory_valid = past_traj[-valid_past:, :]  # Time(valid) X (x,y)
+
+            # try:
+            #     kalman_traj = estimate_kalman_filter(past_trajectory_valid, idx_of_first_zero)  # (x,y)
+            #     kalman_diff = calculate_epe(kalman_traj, gt_future[idx_of_first_zero-1])
+            # except:
+            #     continue
+            # if kalman_diff < 20: continue
+
+            tracks_to_preidct[k] = {'track_index': idx, 'track_id': k, 'difficulty': 0, 'object_type': type}
+
+        return tracks_to_preidct
+
 
 
 import hydra

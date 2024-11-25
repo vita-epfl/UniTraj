@@ -7,9 +7,8 @@ import pytorch_lightning as pl
 import torch
 
 
-def find_latest_checkpoint(base_path):
-    # Pattern to match all .ckpt files in the base_path recursively
-    search_pattern = os.path.join(base_path, 'epoch*', '*.ckpt')
+def find_latest_checkpoint(search_pattern):
+
     # List all files matching the pattern
     list_of_files = glob.glob(search_pattern, recursive=True)
     # Find the file with the latest modification time

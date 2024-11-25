@@ -22,7 +22,7 @@ def evaluation(cfg):
 
     val_set = build_dataset(cfg, val=True)
 
-    eval_batch_size = max(cfg.method['eval_batch_size'] // len(cfg.devices) // val_set.data_chunk_size, 1)
+    eval_batch_size = cfg.method['eval_batch_size']
 
     val_loader = DataLoader(
         val_set, batch_size=eval_batch_size, num_workers=cfg.load_num_workers, shuffle=False, drop_last=False,
