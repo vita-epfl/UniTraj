@@ -1,0 +1,46 @@
+# common
+model_name: MAE
+
+#model
+embed_dim: 128
+encoder_depth: 4
+decoder_depth: 4
+num_heads: 8
+mlp_ratio: 4.0
+qkv_bias: False
+drop_path: 0.2
+actor_mask_ratio: 0.5
+lane_mask_ratio: 0.5
+loss_weight: [1.0, 1.0, 0.35]
+num_agent_feature: 39
+num_map_feature: 29
+num_fut_feature: 2
+
+# train
+max_epochs: 60
+learning_rate: 0.001
+warmup_epochs : 10
+weight_decay: 0.0001
+min_learning_rate: 0.000001
+
+learning_rate_sched: [22, 24, 26, 28]
+optimizer: AdamW
+scheduler: lambdaLR
+grad_clip_norm: 1000.0
+
+lr_decay: 0.5
+lr_clip: 0.000001
+WEIGHT_DECAY: 0.01
+train_batch_size: 32 #32 #128
+eval_batch_size: 32 #32 #128
+
+# data related
+max_num_agents: 32
+map_range: 100
+max_num_roads: 256
+max_points_per_lane: 20 # will be overwritten if manually_split_lane is True
+# lane split related params
+manually_split_lane: False
+point_sampled_interval: 1
+num_points_each_polyline: 20
+vector_break_dist_thresh: 1.0
