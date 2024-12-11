@@ -21,9 +21,14 @@ and [WandB](https://wandb.ai/site), the framework is easy to configure, train an
 ![system](docs/assets/support.png)
 
 ## 📰 News & Updates
+
+### Dec. 2024
+- 🔥 UniTraj now supports data selection with [TAROT](https://github.com/vita-epfl/TAROT)! Try to use less data for improved performance.
+
 ### Nov. 2024
 - Adding AV2 evaluation tools.
 - Using h5 format data cache for faster loader.
+
 ### Sep. 2024
 - New website is live! Check it out [here](https://vita-epfl.github.io/UniTraj/).
 
