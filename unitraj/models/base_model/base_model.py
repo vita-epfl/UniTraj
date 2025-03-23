@@ -50,7 +50,6 @@ class BaseModel(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         prediction, loss = self.forward(batch)
-        self.compute_official_evaluation(batch, prediction)
         self.log_info(batch, batch_idx, prediction, status='train')
         return loss
 
