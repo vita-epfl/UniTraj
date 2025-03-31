@@ -16,6 +16,7 @@ from unitraj.datasets.common_utils import get_polyline_dir, find_true_segments, 
     get_kalman_difficulty, get_trajectory_type, interpolate_polyline
 from unitraj.datasets.types import object_type, polyline_type
 from unitraj.utils.visualization import check_loaded_data
+#from unitraj.datasets.fmae_dataset import FMAEDataset
 from functools import lru_cache
 
 default_value = 0
@@ -125,6 +126,11 @@ class BaseDataset(Dataset):
                     output = self.process(output)
 
                     output = self.postprocess(output)
+
+                    output = self.convert_to_model_specific_format(output)
+
+                    #if isinstance(self, FMAEDataset):
+                    #    output = self.convert_to_fmae_format(output)
 
                 except Exception as e:
                     print('Warning: {} in {}'.format(e, file_name))
@@ -455,6 +461,9 @@ class BaseDataset(Dataset):
         # Add the trajectory type (stationary, straight, right turn...)
         get_trajectory_type(output)
 
+        return output
+    
+    def convert_to_model_specific_format(self, output):
         return output
 
     def collate_fn(self, data_list):

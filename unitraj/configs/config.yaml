@@ -21,7 +21,7 @@ trajectory_sample_interval: 1 # sample interval for the trajectory
 only_train_on_ego: False # only train on AV
 center_offset_of_map: [ 30.0, 0.0 ] # center offset of the map
 use_cache: False # use cache for data loading
-overwrite_cache: False # overwrite existing cache
+overwrite_cache: True # overwrite existing cache
 store_data_in_memory: False # store data in memory
 
 # official evaluation
