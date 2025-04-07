@@ -42,7 +42,7 @@ class FMAEDataset(BaseDataset):
         }
 
         ## TODO use clone()
-        data["origin"] = input["center_objects_world"][0:2]#input["obj_trajs_pos"][..., h_steps-1, 0:2]
+        data["origin"] = input["center_objects_world"][0:2] #input["obj_trajs_pos"][..., h_steps-1, 0:2]
         data["theta"] = np.asin(input["center_objects_world"][35])
         rotate_mat = torch.tensor(
             [

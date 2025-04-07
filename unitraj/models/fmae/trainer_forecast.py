@@ -14,7 +14,7 @@ from src.utils.submission_av2 import SubmissionAv2
 from .model_forecast import ModelForecast
 
 
-class Trainer(pl.LightningModule):
+class TrainerForecast(pl.LightningModule):
     def __init__(
         self,
         dim=128,
@@ -31,7 +31,7 @@ class Trainer(pl.LightningModule):
         epochs: int = 60,
         weight_decay: float = 1e-4,
     ) -> None:
-        super(Trainer, self).__init__()
+        super(TrainerForecast, self).__init__()
         self.warmup_epochs = warmup_epochs
         self.epochs = epochs
         self.lr = lr

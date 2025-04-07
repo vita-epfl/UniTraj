@@ -9,9 +9,10 @@ from src.utils.optim import WarmupCosLR
 from .model_mae import ModelMAE
 
 
-class Trainer(pl.LightningModule):
+class TrainerMAE(pl.LightningModule):
     def __init__(
         self,
+        config = None, #new for UniTraj
         dim=128,
         historical_steps=50,
         future_steps=60,
@@ -29,12 +30,34 @@ class Trainer(pl.LightningModule):
         loss_weight=[1.0, 1.0, 0.35],
         weight_decay: float = 1e-4,
     ) -> None:
-        super(Trainer, self).__init__()
+        super(TrainerMAE, self).__init__()
+
+        ## for UniTraj integration
+        if config is not None:
+            dim = config["dim"]
+            historical_steps = config["past_len"]
+            future_steps = config["future_len"]
+            encoder_depth = config["num_encoder_layers"]
+            decoder_depth = config["num_decoder_layers"]
+            num_heads = config["tx_num_heads"]
+            mlp_ratio = config["mlp_ratio"]
+            qkv_bias = config["qkv_bias"]
+            drop_path = config["drop_path"]
+            actor_mask_ratio = config["actor_mask_ratio"]
+            lane_mask_ratio = config["lane_mask_ratio"]
+            epochs = config["max_epochs"]
+            warmup_epochs = config["warmup_epochs"]
+            lr = config["learning_rate"]
+            weight_decay = config["weight_decay"]
+            loss_weight = config["loss_weight"]
+
         self.epochs = epochs
         self.warmup_epochs = warmup_epochs
         self.lr = lr
         self.weight_decay = weight_decay
         self.save_hyperparameters()
+
+            
 
         self.net = ModelMAE(
             embed_dim=dim,
