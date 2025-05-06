@@ -4,12 +4,12 @@ import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 
-from src.utils.optim import WarmupCosLR
+from .optim import WarmupCosLR
 
 from .model_mae import ModelMAE
+from unitraj.models.base_model.base_model import BaseModel
 
-
-class TrainerMAE(pl.LightningModule):
+class TrainerMAE(BaseModel):
     def __init__(
         self,
         config = None, #new for UniTraj
@@ -51,6 +51,7 @@ class TrainerMAE(pl.LightningModule):
             weight_decay = config["weight_decay"]
             loss_weight = config["loss_weight"]
 
+        self.config = config
         self.epochs = epochs
         self.warmup_epochs = warmup_epochs
         self.lr = lr
@@ -75,15 +76,23 @@ class TrainerMAE(pl.LightningModule):
         )
 
     def forward(self, data):
-        return self.net(data)
+        converted_data = self.convert_to_fmae_format(data)
+        return self.net(converted_data)
 
     def training_step(self, data, batch_idx):
         out = self(data)
+        prediction = out["y_hat"][..., :2]
+        self.compute_official_evaluation(data, prediction)
+        self.log_info(data, batch_idx,  prediction, status='train')
         return out["loss"]
 
     def validation_step(self, data, batch_idx):
         out = self(data)
-        self.log("val_loss", out["loss"], on_epoch=True)
+        prediction = out["y_hat"][..., :2]
+        self.compute_official_evaluation(data, prediction)
+        self.log_info(data, batch_idx,  prediction, status='val')
+        #self.log("val_loss", out["loss"], on_epoch=True)
+        return out["loss"]
 
     def configure_optimizers(self):
         decay = set()
@@ -153,3 +162,6 @@ class TrainerMAE(pl.LightningModule):
             epochs=self.epochs,
         )
         return [optimizer], [scheduler]
+
+
+    

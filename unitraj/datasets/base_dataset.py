@@ -642,7 +642,7 @@ class BaseDataset(Dataset):
                                        ((0, 0), (0, max_num_agents - obj_trajs_future_mask.shape[1]), (0, 0)))
 
         return (obj_trajs_data, obj_trajs_mask.astype(bool), obj_trajs_pos, obj_trajs_last_pos,
-                obj_trajs_future_state, obj_trajs_future_mask, center_gt_trajs, center_gt_trajs_mask,
+                obj_trajs_future_state, obj_trajs_future_mask.astype(bool), center_gt_trajs, center_gt_trajs_mask,
                 center_gt_final_valid_idx,
                 track_index_to_predict_new)
 

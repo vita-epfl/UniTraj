@@ -20,6 +20,7 @@ class ModelForecast(nn.Module):
         qkv_bias=False,
         drop_path=0.2,
         future_steps: int = 60,
+        historical_steps: int = 50,
     ) -> None:
         super().__init__()
         self.hist_embed = AgentEmbeddingLayer(
@@ -48,6 +49,9 @@ class ModelForecast(nn.Module):
 
         self.actor_type_embed = nn.Parameter(torch.Tensor(4, embed_dim))
         self.lane_type_embed = nn.Parameter(torch.Tensor(1, 1, embed_dim))
+
+        self.future_steps = future_steps
+        self.historical_steps = historical_steps
 
         self.decoder = MultimodalDecoder(embed_dim, future_steps)
         self.dense_predictor = nn.Sequential(
@@ -79,7 +83,7 @@ class ModelForecast(nn.Module):
         return self.load_state_dict(state_dict=state_dict, strict=False)
 
     def forward(self, data):
-        hist_padding_mask = data["x_padding_mask"][:, :, :50]
+        hist_padding_mask = data["x_padding_mask"][:, :, :self.historical_steps]
         hist_key_padding_mask = data["x_key_padding_mask"]
         hist_feat = torch.cat(
             [
@@ -112,7 +116,7 @@ class ModelForecast(nn.Module):
         lane_feat = lane_feat.view(B, M, -1)
 
         x_centers = torch.cat([data["x_centers"], data["lane_centers"]], dim=1)
-        angles = torch.cat([data["x_angles"][:, :, 49], data["lane_angles"]], dim=1)
+        angles = torch.cat([data["x_angles"][:, :, self.historical_steps-1], data["lane_angles"]], dim=1)
         x_angles = torch.stack([torch.cos(angles), torch.sin(angles)], dim=-1)
         pos_feat = torch.cat([x_centers, x_angles], dim=-1)
         pos_embed = self.pos_embed(pos_feat)
@@ -136,7 +140,7 @@ class ModelForecast(nn.Module):
         y_hat, pi = self.decoder(x_agent)
 
         x_others = x_encoder[:, 1:N]
-        y_hat_others = self.dense_predictor(x_others).view(B, -1, 60, 2)
+        y_hat_others = self.dense_predictor(x_others).view(B, -1, self.future_steps, 2)
 
         return {
             "y_hat": y_hat,

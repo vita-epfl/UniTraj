@@ -7,7 +7,8 @@ __all__ = {
     'autobot': AutoBotDataset,
     'wayformer': WayformerDataset,
     'MTR': MTRDataset,
-    'FMAE': FMAEDataset,
+    'forecast': FMAEDataset,
+    'MAE': FMAEDataset,
 }
 
 
