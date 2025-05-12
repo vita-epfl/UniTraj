@@ -1,0 +1,83 @@
+# Config format schema number, the yaml support to valid case source from different dataset
+# common
+model_name: SMART
+
+time_info: &time_info
+  num_historical_steps: 11
+  num_future_steps: 80
+  use_intention: True
+  token_size: 2048
+
+Dataset:
+  root:
+  shuffle: True
+  num_workers: 1
+  pin_memory: True
+  persistent_workers: True
+  train_raw_dir: ["data/waymo_processed/training"]
+  val_raw_dir: ["data/waymo_processed/validation"]
+  test_raw_dir:
+  transform: WaymoTargetBuilder
+  train_processed_dir:
+  val_processed_dir:
+  test_processed_dir:
+  dataset: "scalable"
+  <<: *time_info
+
+Trainer:
+  strategy: ddp_find_unused_parameters_false
+  accelerator: "gpu"
+  devices: 1
+  max_epochs: 32
+  save_ckpt_path:
+  num_nodes: 1
+  mode:
+  ckpt_path:
+  precision: 32
+  accumulate_grad_batches: 1
+
+Model:
+  mode: "train"
+  predictor: "smart"
+  dataset: "waymo"
+  input_dim: 2
+  hidden_dim: 128
+  output_dim: 2
+  output_head: False
+  num_heads: 8
+  <<: *time_info
+  head_dim: 16
+  dropout: 0.1
+  num_freq_bands: 64
+  lr: 0.0005
+  warmup_steps: 0
+  total_steps: 32
+  map_pretrain: False
+  train_map: False
+  decoder:
+    <<: *time_info
+    num_map_layers: 3
+    num_agent_layers: 6
+    a2a_radius: 60
+    pl2pl_radius: 10
+    pl2a_radius: 30
+    time_span: 30
+# train
+train_batch_size: 2
+val_batch_size: 1
+test_batch_size: 1
+eval_batch_size: 2
+max_epochs: 128
+learning_rate: 0.0001
+learning_rate_sched: [ 10, 20, 30, 40, 50 ]
+optimizer: AdamW
+scheduler: lambdaLR
+grad_clip_norm: 1000.0
+weight_decay: 0.01
+
+# data related
+max_num_agents: 64
+map_range: 100
+max_num_roads: 768
+max_points_per_lane: 30
+manually_split_lane: False
