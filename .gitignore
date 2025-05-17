@@ -1,5 +1,15 @@
-/unitraj/ckpt/
+/unitraj/unitraj_ckpt/
 /unitraj/lightning_logs/
 /unitraj/outputs/
 /unitraj/tmp
+/unitraj/data_samples
+/build
+/outputs
+*.pyc
+/unitraj/cache
+/unitraj/wandb
 .DS_Store
+/UniTraj.egg-info
+*.log
+*.deb
+*.so

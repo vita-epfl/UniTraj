@@ -1,26 +1,24 @@
 # common
-model_name: autobot
-num_modes: 6
-hidden_size: 128
-num_encoder_layers: 2
-num_decoder_layers: 2
-tx_hidden_size: 384
-tx_num_heads: 16
-dropout: 0.1
-entropy_weight: 40.0
-kl_weight: 20.0
-use_FDEADE_aux_loss: True
+model_name: MAE
+num_encoder_layers: 4
+num_decoder_layers: 4
+mlp_ratio: 4.0
+dim: 128
+qkv_bias: False
+drop_path: 0.2
+tx_num_heads: 8
+loss_weight: [1.0, 1.0, 0.35]
+weight_decay: 1e-4
 
 # train
-max_epochs: 10 #150 #40
-learning_rate: 0.00075 # 0.00075 # 1e-3 for lanegcn
-learning_rate_sched: [ 10, 20, 30, 40, 50 ]
-optimizer: Adam #According to PyTorch naming
-scheduler: multistep # plateau, multistep
-ewc_lambda: 2000
-train_batch_size: 32 #128 #32 #128
-eval_batch_size: 256 #32 #128
+max_epochs: 60 #150 #40
+warmup_epochs: 10
+learning_rate: 1e-3 # 0.00075 # 1e-3 for lanegcn
+train_batch_size: 32 #32 #128
+eval_batch_size: 64 #32 #128
 grad_clip_norm: 5
+actor_mask_ratio: 0.5
+lane_mask_ratio: 0.5
 
 # data related
 max_num_agents: 15

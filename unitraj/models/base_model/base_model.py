@@ -358,22 +358,14 @@ class BaseModel(pl.LightningModule):
             "origin": torch.rand(B, 2), #scene to global coordinates position
             "theta": torch.rand(B), #scene to global coordinates orientation
         }
-
-        ## TODO use clone()
-        #data = data.cuda()
         if not self.config["debug"]:
             for key, value in input.items():
                 if isinstance(value, torch.Tensor):
                         input[key] = input[key].to("cpu")
-        #data["x"] = data["x"].cuda()
-        data["origin"] = input["center_objects_world"][0:2] #input["obj_trajs_pos"][..., h_steps-1, 0:2]
-        data["theta"] = input["center_objects_world"][:, 6]
-        # rotate_mat = torch.tensor(
-        #     [
-        #         [torch.cos(-data["theta"]), -torch.sin(-data["theta"])],
-        #         [torch.sin(-data["theta"]), torch.cos(-data["theta"])],
-        #     ],
-        # )
+
+        data["origin"] = input["center_objects_world"][0:2].clone()
+        data["theta"] = input["center_objects_world"][:, 6].clone()
+
         data["x"][..., 1:h_steps, 0:2] = torch.where(
             (~input["obj_trajs_mask"][..., :(h_steps - 1)] | ~input["obj_trajs_mask"][..., 1:h_steps]).unsqueeze(-1),
             torch.zeros(B, N_agent, h_steps - 1, 2),
@@ -407,11 +399,14 @@ class BaseModel(pl.LightningModule):
         data["x_positions"] = input["obj_trajs"][..., :h_steps, :2].clone()#torch.matmul(data["x"][..., 0:2] + data["origin"], rotate_mat)[..., :h_steps, :2].clone()
         data["x_centers"] = input["obj_trajs"][..., h_steps - 1, :2].clone() 
         data["x_angles"] = np.arcsin(input["obj_trajs"][..., 3])
-        data["x_velocity"] = np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1)#torch.cat((np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1), np.linalg.norm(input["obj_trajs_future_state"][..., 2:], axis=-1)), dim=-1)
+        data["x_velocity"] = torch.cat(
+            (torch.from_numpy(np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1)), 
+             torch.from_numpy(np.linalg.norm(input["obj_trajs_future_state"][..., 2:], axis=-1))), 
+             dim=-1)#np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1)#torch.cat((np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1), np.linalg.norm(input["obj_trajs_future_state"][..., 2:], axis=-1)), dim=-1)
         data["x_velocity_diff"][..., 1:h_steps] = torch.where(
             (~input["obj_trajs_mask"][..., :(h_steps - 1)] | ~input["obj_trajs_mask"][..., 1:h_steps]),
             torch.zeros(B, N_agent, h_steps-1),
-            torch.from_numpy(data["x_velocity"][..., 1:h_steps] - data["x_velocity"][..., :(h_steps - 1)]),
+            data["x_velocity"][..., 1:h_steps] - data["x_velocity"][..., :(h_steps - 1)],
         )
         data["x_velocity_diff"][..., 0] = torch.zeros(N_agent)
         data["lane_positions"] = input["map_polylines"][..., :2].clone()
@@ -420,18 +415,20 @@ class BaseModel(pl.LightningModule):
              data["lane_positions"][..., lane_sampling_pts//2, 1] -  data["lane_positions"][..., (lane_sampling_pts//2)-1, 1],
              data["lane_positions"][..., lane_sampling_pts//2, 0] -  data["lane_positions"][..., (lane_sampling_pts//2)-1, 0],
         )
-        #data["lane_attr"]
-        #data["is_intersections"]
-        data["y"] = input["obj_trajs_future_state"][..., :2]
+
+        #data["lane_attr"] -> not used in model
+        #data["is_intersections"] -> not used in model
+
+        data["y"] = input["obj_trajs_future_state"][..., :2].clone()
         data["x_padding_mask"] = torch.cat((~input["obj_trajs_mask"], ~input["obj_trajs_future_mask"]), dim=-1)
-        data["lane_padding_mask"] = ~input["map_polylines_mask"]
+        data["lane_padding_mask"] = ~input["map_polylines_mask"].clone()
         data["x_key_padding_mask"] = data["x_padding_mask"].all(-1)
         data["lane_key_padding_mask"] = data["lane_padding_mask"].all(-1)
         data["num_actors"] =  (~data["x_key_padding_mask"]).sum(-1)
         data["num_lanes"] = (~data["lane_key_padding_mask"]).sum(-1)
         data["scenario_id"] = [input["scenario_id"]] * B
-        #data["track_id"] information not present in input
 
+        #data["track_id"] information not present in input -> only used for av2 submission
 
         if not self.config["debug"]:
             for key, value in data.items():

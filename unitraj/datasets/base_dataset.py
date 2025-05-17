@@ -191,7 +191,6 @@ class BaseDataset(Dataset):
             all_state = all_state[starting_fame:ending_fame]
 
             assert all_state.shape[0] == total_steps, f'Error: {all_state.shape[0]} != {total_steps}'
-
             track_infos['object_id'].append(k)
             track_infos['object_type'].append(object_type[v['type']])
             track_infos['trajs'].append(all_state)
@@ -658,6 +657,7 @@ class BaseDataset(Dataset):
                 print(f'Warning: obj_idx={obj_idx} is not valid at time step {current_time_index}, scene_id={scene_id}')
                 continue
             if obj_types[obj_idx] not in selected_type:
+                print(f'Warning: object type in data is not a selected type for scene_id={scene_id}')
                 continue
 
             center_objects_list.append(obj_trajs_full[obj_idx, current_time_index])

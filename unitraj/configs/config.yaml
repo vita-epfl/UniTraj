@@ -1,20 +1,20 @@
 # exp setting
 exp_name: 'test' # name that will be used in wandb
-ckpt_path: null # checkpoint path, used for evaluation
+ckpt_path:  null #/home/simon/1_Uni/Seminarbeit/UniTraj/unitraj/unitraj_ckpt/test/epoch=59-val/brier_fde=1.58.ckpt #./unitraj_ckpt/test # checkpoint path, used for evaluation
 seed: 42 # random seed
-debug: True # debug mode, will use cpu only
+debug: False # debug mode, will use cpu only
 devices: [ 0 ] # gpu ids
 
 # data related
 load_num_workers: 0 # number of workers for loading data
-train_data_path: [ "data_samples/nuscenes" ] # list of paths to the training data
-val_data_path: [ "data_samples/nuscenes" ] # list of paths to the validation data
+train_data_path: [ "data_samples/vod_train" ] # list of paths to the training data
+val_data_path: [ "data_samples/vod_test" ] # list of paths to the validation data
 cache_path: "./cache"
 max_data_num: [ null ] # maximum number of data for each training dataset, null means all data
 starting_frame: [ 0 ] # history trajectory starts at this frame for each training dataset
 past_len: 21 # history trajectory length, 2.1s
 future_len: 60 # future trajectory length, 6s
-object_type: [ 'VEHICLE' ]#, 'PEDESTRIAN', 'CYCLIST'] # object types included in the training set
+object_type: [ 'VEHICLE' , 'PEDESTRIAN', 'CYCLIST'] # object types included in the training set
 line_type: [ 'lane','stop_sign','road_edge','road_line','crosswalk','speed_bump' ] # line type to be considered in the input
 masked_attributes: [ 'z_axis', 'size' ] # attributes to be masked in the input
 trajectory_sample_interval: 1 # sample interval for the trajectory
@@ -31,4 +31,4 @@ eval_waymo: False # whether to evaluate with waymo evaluation tool
 eval_argoverse2: False # whether to evaluate with argoverse evaluation tool
 
 defaults:
-  - method: autobot
+  - method: EMP

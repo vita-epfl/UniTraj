@@ -7,3 +7,6 @@ einops
 easydict
 panda3d-simplepbr==0.10
 h5py
+natten
+av2
+timm

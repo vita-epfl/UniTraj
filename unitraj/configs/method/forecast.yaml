@@ -1,5 +1,5 @@
 # common
-model_name: mae
+model_name: forecast
 num_encoder_layers: 4
 num_decoder_layers: 4
 mlp_ratio: 4.0
@@ -11,7 +11,7 @@ loss_weight: [1.0, 1.0, 0.35]
 weight_decay: 1e-4
 
 # train
-max_epochs: 60 #150 #40
+max_epochs: 100 #150 #40
 warmup_epochs: 10
 learning_rate: 1e-3 # 0.00075 # 1e-3 for lanegcn
 train_batch_size: 32 #32 #128

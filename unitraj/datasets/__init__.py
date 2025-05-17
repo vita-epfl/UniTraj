@@ -2,6 +2,7 @@ from .MTR_dataset import MTRDataset
 from .autobot_dataset import AutoBotDataset
 from .wayformer_dataset import WayformerDataset
 from .fmae_dataset import FMAEDataset
+from .EMP_dataset import EMPDataset
 
 __all__ = {
     'autobot': AutoBotDataset,
@@ -9,6 +10,7 @@ __all__ = {
     'MTR': MTRDataset,
     'forecast': FMAEDataset,
     'MAE': FMAEDataset,
+    'EMP': EMPDataset
 }
 
 
