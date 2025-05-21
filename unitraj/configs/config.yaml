@@ -1,6 +1,6 @@
 # exp setting
 exp_name: 'test' # name that will be used in wandb
-ckpt_path:  null #/home/simon/1_Uni/Seminarbeit/UniTraj/unitraj/unitraj_ckpt/test/epoch=59-val/brier_fde=1.58.ckpt #./unitraj_ckpt/test # checkpoint path, used for evaluation
+ckpt_path:  null #/home/simon/1_Uni/Seminarbeit/UniTraj/unitraj/unitraj_ckpt/test/epoch=33-val/brier_fde=5.20.ckpt #/home/simon/1_Uni/Seminarbeit/UniTraj/unitraj/unitraj_ckpt/test/epoch=59-val/brier_fde=1.58.ckpt #./unitraj_ckpt/test # checkpoint path, used for evaluation
 seed: 42 # random seed
 debug: False # debug mode, will use cpu only
 devices: [ 0 ] # gpu ids
@@ -31,4 +31,4 @@ eval_waymo: False # whether to evaluate with waymo evaluation tool
 eval_argoverse2: False # whether to evaluate with argoverse evaluation tool
 
 defaults:
-  - method: EMP
+  - method: MAE

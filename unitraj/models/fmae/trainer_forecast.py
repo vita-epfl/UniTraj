@@ -49,6 +49,7 @@ class TrainerForecast(BaseModel):
             warmup_epochs = config["warmup_epochs"]
             lr = config["learning_rate"]
             weight_decay = config["weight_decay"]
+            pretrained_weights = config["pretrained_weights"]
 
         self.warmup_epochs = warmup_epochs
         self.epochs = epochs
@@ -70,6 +71,7 @@ class TrainerForecast(BaseModel):
 
         if pretrained_weights is not None:
             self.net.load_from_checkpoint(pretrained_weights)
+            print("Loading pretrained weights from: ", pretrained_weights)
 
         #metrics = MetricCollection(
         #    {

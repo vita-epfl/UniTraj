@@ -30,7 +30,7 @@ class TrainerMAE(BaseModel):
         loss_weight=[1.0, 1.0, 0.35],
         weight_decay: float = 1e-4,
     ) -> None:
-        super(TrainerMAE, self).__init__()
+        super(TrainerMAE, self).__init__(config=config)
 
         ## for UniTraj integration
         if config is not None:
@@ -76,21 +76,31 @@ class TrainerMAE(BaseModel):
         )
 
     def forward(self, data):
-        converted_data = self.convert_to_fmae_format(data)
+        converted_data = self.convert_to_fmae_format(data['input_dict'].copy())
         return self.net(converted_data)
 
     def training_step(self, data, batch_idx):
         out = self(data)
-        prediction = out["y_hat"][..., :2]
-        self.compute_official_evaluation(data, prediction)
+
+        #unitraj
+        prediction = {}
+        prediction['predicted_trajectory'] = out["y_hat"][0, :, :1, :, :2]
+        prediction['predicted_probability'] = out["pi"]
         self.log_info(data, batch_idx,  prediction, status='train')
+        self.compute_official_evaluation(data, prediction)
+
         return out["loss"]
 
     def validation_step(self, data, batch_idx):
         out = self(data)
-        prediction = out["y_hat"][..., :2]
+
+        #unitraj
+        prediction = {}
+        prediction['predicted_trajectory'] = out["y_hat"][0, :, :1, :, :2]
+        prediction['predicted_probability'] = out["pi"]
         self.compute_official_evaluation(data, prediction)
         self.log_info(data, batch_idx,  prediction, status='val')
+
         #self.log("val_loss", out["loss"], on_epoch=True)
         return out["loss"]
 

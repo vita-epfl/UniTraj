@@ -419,7 +419,11 @@ class BaseModel(pl.LightningModule):
         #data["lane_attr"] -> not used in model
         #data["is_intersections"] -> not used in model
 
-        data["y"] = input["obj_trajs_future_state"][..., :2].clone()
+        data["y"] = torch.where(
+            (~input["obj_trajs_mask"][..., (h_steps - 1)].unsqueeze(-1) | ~input["obj_trajs_future_mask"][..., :]).unsqueeze(-1),
+            torch.zeros(B, N_agent, f_steps, 2),
+            input["obj_trajs_future_state"][..., :, 0:2] - input["obj_trajs"][..., (h_steps - 1), 0:2].unsqueeze(-2),
+        )#input["obj_trajs_future_state"][..., :2].clone()
         data["x_padding_mask"] = torch.cat((~input["obj_trajs_mask"], ~input["obj_trajs_future_mask"]), dim=-1)
         data["lane_padding_mask"] = ~input["map_polylines_mask"].clone()
         data["x_key_padding_mask"] = data["x_padding_mask"].all(-1)

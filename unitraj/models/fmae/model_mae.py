@@ -32,6 +32,8 @@ class ModelMAE(nn.Module):
         self.actor_mask_ratio = actor_mask_ratio
         self.lane_mask_ratio = lane_mask_ratio
         self.loss_weight = loss_weight
+        self.history_steps = history_steps
+        self.future_steps = future_steps
 
         self.hist_embed = AgentEmbeddingLayer(4, 32, drop_path_rate=drop_path)
         self.future_embed = AgentEmbeddingLayer(3, 32, drop_path_rate=drop_path)
@@ -184,7 +186,7 @@ class ModelMAE(nn.Module):
         return x_masked, new_key_padding_mask, ids_keep_list
 
     def forward(self, data):
-        hist_padding_mask = data["x_padding_mask"][:, :, :50]
+        hist_padding_mask = data["x_padding_mask"][:, :, :self.history_steps]
         hist_feat = torch.cat(
             [
                 data["x"],
@@ -198,7 +200,7 @@ class ModelMAE(nn.Module):
         hist_feat = self.hist_embed(hist_feat.permute(0, 2, 1).contiguous())
         hist_feat = hist_feat.view(B, N, hist_feat.shape[-1])
 
-        future_padding_mask = data["x_padding_mask"][:, :, 50:]
+        future_padding_mask = data["x_padding_mask"][:, :, self.history_steps:]
         future_feat = torch.cat([data["y"], ~future_padding_mask[..., None]], dim=-1)
         B, N, L, D = future_feat.shape
         future_feat = future_feat.view(B * N, L, D)
@@ -223,8 +225,8 @@ class ModelMAE(nn.Module):
         )
         angles = torch.cat(
             [
-                data["x_angles"][..., 49],
-                data["x_angles"][..., 49],
+                data["x_angles"][..., self.history_steps - 1],
+                data["x_angles"][..., self.history_steps - 1],
                 data["lane_angles"],
             ],
             dim=1,
@@ -333,19 +335,19 @@ class ModelMAE(nn.Module):
         )
 
         # hist pred loss
-        x_hat = self.history_pred(hist_token).view(-1, 50, 2)
-        x = (data["x_positions"] - data["x_centers"].unsqueeze(-2)).view(-1, 50, 2)
-        x_reg_mask = ~data["x_padding_mask"][:, :, :50]
+        x_hat = self.history_pred(hist_token).view(-1, self.history_steps, 2)
+        x = (data["x_positions"] - data["x_centers"].unsqueeze(-2)).view(-1, self.history_steps, 2)
+        x_reg_mask = ~data["x_padding_mask"][:, :, :self.history_steps]
         x_reg_mask[~hist_pred_mask] = False
-        x_reg_mask = x_reg_mask.view(-1, 50)
+        x_reg_mask = x_reg_mask.view(-1, self.history_steps)
         hist_loss = F.l1_loss(x_hat[x_reg_mask], x[x_reg_mask])
 
         # future pred loss
-        y_hat = self.future_pred(future_token).view(-1, 60, 2)  # B*N, 120
-        y = data["y"].view(-1, 60, 2)
-        reg_mask = ~data["x_padding_mask"][:, :, 50:]
+        y_hat = self.future_pred(future_token).view(-1, self.future_steps, 2)  # B*N, 120
+        y = data["y"].view(-1, self.future_steps, 2)
+        reg_mask = ~data["x_padding_mask"][:, :, self.history_steps:]
         reg_mask[~future_pred_mask] = False
-        reg_mask = reg_mask.view(-1, 60)
+        reg_mask = reg_mask.view(-1, self.future_steps)
         future_loss = F.l1_loss(y_hat[reg_mask], y[reg_mask])
 
         loss = (
@@ -361,9 +363,14 @@ class ModelMAE(nn.Module):
             "lane_pred_loss": lane_pred_loss.item(),
         }
 
+        #for UniTraj integration--------------------
+        out["pi"] = torch.ones((B, 1))
+        out["y_hat"] =  y_hat.view(1, B, N, self.future_steps, 2)#y_hat.view(B, N, self.future_steps, 2)[:,:1,:,:]
+        #------------------------------------------
+
         if not self.training:
-            out["x_hat"] = x_hat.view(B, N, 50, 2)
-            out["y_hat"] = y_hat.view(1, B, N, 60, 2)
+            out["x_hat"] = x_hat.view(B, N, self.history_steps, 2)
+            out["y_hat"] = y_hat.view(1, B, N, self.future_steps, 2)
             out["lane_hat"] = lane_pred.view(B, M, 20, 2)
             out["lane_keep_ids"] = lane_ids_keep_list
             out["hist_keep_ids"] = hist_keep_ids_list

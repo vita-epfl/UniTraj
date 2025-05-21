@@ -153,7 +153,7 @@ class TrainerEMP(BaseModel):
         
         #unitraj
         prediction = {}
-        prediction['predicted_trajectory'] = out["y_hat"][..., :2]
+        prediction['predicted_trajectory'] = out["y_hat"][..., :2] - data['input_dict']['obj_trajs'][:, 0, 20, 0:2].unsqueeze(-2).unsqueeze(-2)
         prediction['predicted_probability'] = out["pi"]
         self.compute_official_evaluation(data, prediction)
         self.log_info(data, batch_idx,  prediction, status='train')
@@ -178,7 +178,7 @@ class TrainerEMP(BaseModel):
 
         #unitraj
         prediction = {}
-        prediction['predicted_trajectory'] = out["y_hat"][..., :2]
+        prediction['predicted_trajectory'] = out["y_hat"][..., :2] - data['input_dict']['obj_trajs'][:, 0, 20, 0:2].unsqueeze(-2).unsqueeze(-2)
         prediction['predicted_probability'] = out["pi"]
         self.compute_official_evaluation(data, prediction)
         self.log_info(data, batch_idx,  prediction, status='val')

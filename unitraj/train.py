@@ -64,7 +64,7 @@ def train(cfg):
         search_pattern = os.path.join('./unitraj_ckpt', cfg.exp_name, '**', '*.ckpt')
         cfg.ckpt_path = find_latest_checkpoint(search_pattern)
         print(f"Found checkpoint: {cfg.ckpt_path}")
-        print(search_pattern)
+
 
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader, ckpt_path=cfg.ckpt_path)
 

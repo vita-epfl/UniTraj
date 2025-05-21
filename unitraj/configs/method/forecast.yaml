@@ -19,6 +19,7 @@ eval_batch_size: 64 #32 #128
 grad_clip_norm: 5
 actor_mask_ratio: 0.5
 lane_mask_ratio: 0.5
+pretrained_weights: ./models/fmae/pretrained_weights/mae_pretrain.ckpt # path to the pretrained MAE model, used for lane mask
 
 # data related
 max_num_agents: 15
@@ -30,6 +31,6 @@ manually_split_lane: False # if True, lanes will be split with the same number o
 point_sampled_interval: 1 # only used when manually_split_lane is True, the interval of points sampled from the original lane
 num_points_each_polyline: 20 # only used when manually_split_lane is True, the number of points in each polyline
 vector_break_dist_thresh: 1.0 # only used when manually_split_lane is True, the distance threshold to break the vector to split the lane
-
+mae_ckpt: ./models/fmae/pretrained_weights/mae_pretrain.ckpt # path to the pretrained MAE model, used for lane mask
 
 
