@@ -20,6 +20,7 @@ grad_clip_norm: 5
 actor_mask_ratio: 0.5
 lane_mask_ratio: 0.5
 decoder: mlp
+pretrained_weights: ./models/emp/pretrained_weights/empm.ckpt
 
 # data related
 max_num_agents: 15

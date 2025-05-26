@@ -54,6 +54,7 @@ class TrainerEMP(BaseModel):
             lr = config["learning_rate"]
             weight_decay = config["weight_decay"]
             decoder = config["decoder"]
+            pretrained_weights = config["pretrained_weights"]
 
         self.warmup_epochs = warmup_epochs
         self.epochs = epochs
@@ -79,6 +80,7 @@ class TrainerEMP(BaseModel):
 
         if pretrained_weights is not None:
             self.net.load_from_checkpoint(pretrained_weights)
+            print("Loading pretrained weights from: ", pretrained_weights)
 
         # metrics = MetricCollection(
         #     {
@@ -220,7 +222,7 @@ class TrainerEMP(BaseModel):
         self.val_scores = {"val_MR": [], "val_minADE1": [], "val_minADE6": [], "val_minFDE1": [], "val_minFDE6": [], "val_brier-minFDE6": []}
 
     def on_validation_end(self) -> None:      
-        print( " & ".join( ["{:5.3f}".format(np.mean(self.val_scores[k])) for k in ["val_MR", "val_minADE6", "val_minFDE6", "val_brier-minFDE6"]] ) )
+        #print( " & ".join( ["{:5.3f}".format(np.mean(self.val_scores[k])) for k in ["val_MR", "val_minADE6", "val_minFDE6", "val_brier-minFDE6"]] ) )
         self.curr_ep += 1
 
     def configure_optimizers(self):

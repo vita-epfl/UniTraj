@@ -363,8 +363,8 @@ class BaseModel(pl.LightningModule):
                 if isinstance(value, torch.Tensor):
                         input[key] = input[key].to("cpu")
 
-        data["origin"] = input["center_objects_world"][0:2].clone()
-        data["theta"] = input["center_objects_world"][:, 6].clone()
+        data["origin"] = input["center_objects_world"][..., 0:2].clone()
+        data["theta"] = input["center_objects_world"][..., 6].clone()
 
         data["x"][..., 1:h_steps, 0:2] = torch.where(
             (~input["obj_trajs_mask"][..., :(h_steps - 1)] | ~input["obj_trajs_mask"][..., 1:h_steps]).unsqueeze(-1),
@@ -398,9 +398,9 @@ class BaseModel(pl.LightningModule):
                     data["x_attr"][center_idx, actor_idx, 1] = 1 #UNSCORED_TRACK
         data["x_positions"] = input["obj_trajs"][..., :h_steps, :2].clone()#torch.matmul(data["x"][..., 0:2] + data["origin"], rotate_mat)[..., :h_steps, :2].clone()
         data["x_centers"] = input["obj_trajs"][..., h_steps - 1, :2].clone() 
-        data["x_angles"] = np.arcsin(input["obj_trajs"][..., 3])
+        data["x_angles"] = np.arcsin(input["obj_trajs"][..., h_steps+12].float())
         data["x_velocity"] = torch.cat(
-            (torch.from_numpy(np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1)), 
+            (torch.from_numpy(np.linalg.norm(input["obj_trajs"][..., h_steps+14:h_steps+16], axis=-1)), 
              torch.from_numpy(np.linalg.norm(input["obj_trajs_future_state"][..., 2:], axis=-1))), 
              dim=-1)#np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1)#torch.cat((np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1), np.linalg.norm(input["obj_trajs_future_state"][..., 2:], axis=-1)), dim=-1)
         data["x_velocity_diff"][..., 1:h_steps] = torch.where(
@@ -410,7 +410,7 @@ class BaseModel(pl.LightningModule):
         )
         data["x_velocity_diff"][..., 0] = torch.zeros(N_agent)
         data["lane_positions"] = input["map_polylines"][..., :2].clone()
-        data["lane_centers"] = data["lane_positions"][:, :, ((lane_sampling_pts//2)-1):(lane_sampling_pts//2)+1].mean(dim=-1)
+        data["lane_centers"] = data["lane_positions"][:, :, ((lane_sampling_pts//2)-1):(lane_sampling_pts//2)+1].mean(dim=-2)
         data["lane_angles"] = torch.atan2(
              data["lane_positions"][..., lane_sampling_pts//2, 1] -  data["lane_positions"][..., (lane_sampling_pts//2)-1, 1],
              data["lane_positions"][..., lane_sampling_pts//2, 0] -  data["lane_positions"][..., (lane_sampling_pts//2)-1, 0],
@@ -430,7 +430,7 @@ class BaseModel(pl.LightningModule):
         data["lane_key_padding_mask"] = data["lane_padding_mask"].all(-1)
         data["num_actors"] =  (~data["x_key_padding_mask"]).sum(-1)
         data["num_lanes"] = (~data["lane_key_padding_mask"]).sum(-1)
-        data["scenario_id"] = [input["scenario_id"]] * B
+        data["scenario_id"] = input["scenario_id"]
 
         #data["track_id"] information not present in input -> only used for av2 submission
 
@@ -439,3 +439,6 @@ class BaseModel(pl.LightningModule):
                 if isinstance(value, torch.Tensor):
                         data[key] = data[key].cuda()
         return data
+    
+    def convert_to_qcnet_format(self, input):
+        return
