@@ -22,6 +22,10 @@ and [WandB](https://wandb.ai/site), the framework is easy to configure, train an
 
 ## 📰 News & Updates
 
+### May. 2025
+
+- 🔥 UniTraj now supports sim agents! See more details there: [SMART](https://github.com/vita-epfl/UniTraj/tree/main/unitraj/models/smart)
+
 ### Dec. 2024
 - 🔥 UniTraj now supports data selection with [TAROT](https://github.com/vita-epfl/TAROT)! Try to use less data for improved performance.
 
@@ -32,12 +36,6 @@ and [WandB](https://wandb.ai/site), the framework is easy to configure, train an
 ### Sep. 2024
 - New website is live! Check it out [here](https://vita-epfl.github.io/UniTraj/).
 
-### Jul. 2024
-- 🚀 Accepted to ECCV 2024! 
-
-### Mar. 2024
-- 🌐 Launched the official [UniTraj Website](https://www.epfl.ch/labs/vita/research/prediction/vehicle-trajectory-prediction/unitraj-a-unified-framework-for-scalable-vehicle-trajectory-prediction/).
-- 📝 Published UniTraj in [Arxiv](https://arxiv.org/pdf/2403.15098.pdf).
 
 
 ## 🛠 Quick Start
