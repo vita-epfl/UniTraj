@@ -52,6 +52,7 @@ def train(cfg):
         logger=None if cfg.debug else WandbLogger(project="unitraj", name=cfg.exp_name, id=cfg.exp_name),
         devices=1 if cfg.debug else cfg.devices,
         gradient_clip_val=cfg.method.grad_clip_norm,
+        # accumulate_grad_batches=cfg.method.Trainer.accumulate_grad_batches,
         accelerator="cpu" if cfg.debug else "gpu",
         profiler="simple",
         strategy="auto" if cfg.debug else "ddp",

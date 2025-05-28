@@ -87,3 +87,27 @@ traffic_light_state_to_int = {
     MetaDriveType.LANE_STATE_FLASHING_STOP: 7,
     MetaDriveType.LANE_STATE_FLASHING_CAUTION: 8,
 }
+
+smart_traffic_light_state_to_int = {
+    None: 0,
+    MetaDriveType.LANE_STATE_UNKNOWN: 3,
+
+    MetaDriveType.LANE_STATE_ARROW_STOP: 0,
+    MetaDriveType.LANE_STATE_STOP: 0,
+    MetaDriveType.LANE_STATE_FLASHING_STOP: 0,
+
+    MetaDriveType.LANE_STATE_ARROW_CAUTION: 2,
+    MetaDriveType.LANE_STATE_CAUTION: 2,
+    MetaDriveType.LANE_STATE_FLASHING_CAUTION: 2,
+
+    MetaDriveType.LANE_STATE_ARROW_GO: 1,
+    MetaDriveType.LANE_STATE_GO: 1,
+}
+
+smart_polygon_type = {
+    'VEHICLE':0,
+    'BIKE': 1,
+    'BUS': 2,
+    'PEDESTRIAN': 3,
+    'UNKNOWN': 4,
+}

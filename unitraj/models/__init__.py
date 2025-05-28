@@ -1,11 +1,13 @@
 from unitraj.models.autobot.autobot import AutoBotEgo
 from unitraj.models.mtr.MTR import MotionTransformer
 from unitraj.models.wayformer.wayformer import Wayformer
+from unitraj.models.smart.smart import SMART
 
 __all__ = {
     'autobot': AutoBotEgo,
     'wayformer': Wayformer,
     'MTR': MotionTransformer,
+    'SMART': SMART,
 }
 
 

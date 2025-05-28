@@ -1,11 +1,13 @@
 from .MTR_dataset import MTRDataset
 from .autobot_dataset import AutoBotDataset
 from .wayformer_dataset import WayformerDataset
+from .SMART_dataset import SMARTDataset
 
 __all__ = {
     'autobot': AutoBotDataset,
     'wayformer': WayformerDataset,
     'MTR': MTRDataset,
+    'SMART': SMARTDataset,
 }
 
 
