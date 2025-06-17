@@ -1,21 +1,21 @@
 # exp setting
-exp_name: 'test' # name that will be used in wandb
-ckpt_path:  null #/home/simon/1_Uni/Seminarbeit/UniTraj/unitraj/unitraj_ckpt/test/epoch=33-val/brier_fde=5.20.ckpt #/home/simon/1_Uni/Seminarbeit/UniTraj/unitraj/unitraj_ckpt/test/epoch=59-val/brier_fde=1.58.ckpt #./unitraj_ckpt/test # checkpoint path, used for evaluation
+exp_name: 'fmae_av2_val_finetune' # name that will be used in wandb
+ckpt_path: ./unitraj_ckpt/fmae/fixed_model_forecast_finetune.ckpt #./models/emp/pretrained_weights/empm.ckpt # checkpoint path, used for evaluation
 seed: 42 # random seed
 debug: False # debug mode, will use cpu only
 devices: [ 0 ] # gpu ids
 
 # data related
-load_num_workers: 0 # number of workers for loading data
+load_num_workers: 4 # number of workers for loading data
 train_data_path: [ "data_samples/vod_train" ] # list of paths to the training data
-val_data_path: [ "data_samples/vod_test" ] # list of paths to the validation data
+val_data_path: [ "data_samples/av2_val/val_test_new" ] # list of paths to the validation data
 cache_path: "./cache"
 max_data_num: [ null ] # maximum number of data for each training dataset, null means all data
 starting_frame: [ 0 ] # history trajectory starts at this frame for each training dataset
-past_len: 21 # history trajectory length, 2.1s
+past_len: 50 #50 # history trajectory length for UniTraj, 2.1s -> set to 5s for forecastMAE and EMP as they use 5s history
 future_len: 60 # future trajectory length, 6s
 object_type: [ 'VEHICLE' , 'PEDESTRIAN', 'CYCLIST'] # object types included in the training set
-line_type: [ 'lane','stop_sign','road_edge','road_line','crosswalk','speed_bump' ] # line type to be considered in the input
+line_type: [ 'lane'] #only lane for fmae and emp #,'stop_sign','road_edge','road_line','crosswalk','speed_bump' ] # line type to be considered in the input
 masked_attributes: [ 'z_axis', 'size' ] # attributes to be masked in the input
 trajectory_sample_interval: 1 # sample interval for the trajectory
 only_train_on_ego: False # only train on AV
@@ -23,6 +23,7 @@ center_offset_of_map: [ 30.0, 0.0 ] # center offset of the map
 use_cache: False # use cache for data loading
 overwrite_cache: True # overwrite existing cache
 store_data_in_memory: False # store data in memory
+remove_outliers: True # remove outliers in the data
 
 # official evaluation
 nuscenes_dataroot: '/mnt/nas3_rcp_enac_u0900_vita_scratch/datasets/Prediction-Dataset/nuscenes/nuscenes_root'
@@ -31,4 +32,4 @@ eval_waymo: False # whether to evaluate with waymo evaluation tool
 eval_argoverse2: False # whether to evaluate with argoverse evaluation tool
 
 defaults:
-  - method: MAE
+  - method: forecast

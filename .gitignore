@@ -13,3 +13,4 @@
 *.log
 *.deb
 *.so
+unitraj/models/fmae/pretrained_weights/mae_pretrain_vod_56.ckpt

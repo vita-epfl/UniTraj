@@ -16,7 +16,6 @@ from unitraj.datasets.common_utils import get_polyline_dir, find_true_segments, 
     get_kalman_difficulty, get_trajectory_type, interpolate_polyline
 from unitraj.datasets.types import object_type, polyline_type
 from unitraj.utils.visualization import check_loaded_data
-#from unitraj.datasets.fmae_dataset import FMAEDataset
 from functools import lru_cache
 
 default_value = 0
@@ -129,9 +128,6 @@ class BaseDataset(Dataset):
 
                     output = self.convert_to_model_specific_format(output)
 
-                    #if isinstance(self, FMAEDataset):
-                    #    output = self.convert_to_fmae_format(output)
-
                 except Exception as e:
                     print('Warning: {} in {}'.format(e, file_name))
                     output = None
@@ -239,7 +235,8 @@ class BaseDataset(Dataset):
                     cur_info['left_boundary'] = []
                     cur_info['right_boundary'] = []
                 polyline = v['polyline']
-                polyline = interpolate_polyline(polyline)
+                if self.config["max_points_per_lane"] > polyline.shape[0] and (self.config["method"]["model_name"] != "forecast" and self.config ["method"]["model_name"]  != "EMP"): #for those models the data should already be interpolated correctly for pretrained checkpoints to work properly
+                    polyline = interpolate_polyline(polyline)
                 map_infos['lane'].append(cur_info)
             elif polyline_type_ in [6, 7, 8, 9, 10, 11, 12, 13]:
                 try:
@@ -439,6 +436,14 @@ class BaseDataset(Dataset):
         for k, v in ret_dict.items():
             if isinstance(v, np.ndarray) and v.dtype == np.float64:
                 ret_dict[k] = v.astype(np.float32)
+                
+        if self.config['remove_outliers']:
+            lane_samples = torch.from_numpy(map_polylines_data[..., :2]).view(-1, 2)
+            ret_dict["obj_trajs_mask"][:, 1:] = np.array(torch.where(
+                (torch.cdist(torch.from_numpy(ret_dict["obj_trajs_pos"][:, 1:, self.config["past_len"]-1, :2]).float(), lane_samples.float()).min(dim=-1).values >= 5).unsqueeze(-1),
+                torch.zeros_like(torch.from_numpy(ret_dict["obj_trajs_mask"][:, 1:])),
+                torch.from_numpy(ret_dict["obj_trajs_mask"][:, 1:])
+            ))
 
         ret_dict['map_center'] = ret_dict['map_center'].repeat(sample_num, axis=0)
         ret_dict['dataset_name'] = [info['dataset']] * sample_num

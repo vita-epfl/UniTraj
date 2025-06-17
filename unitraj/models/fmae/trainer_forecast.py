@@ -131,7 +131,7 @@ class TrainerForecast(BaseModel):
         #unitraj
         prediction = {}
         prediction['predicted_trajectory'] = out["y_hat"][..., :2]
-        prediction['predicted_probability'] = out["pi"]
+        prediction['predicted_probability'] = torch.softmax(out["pi"].double(), dim=-1)
         self.compute_official_evaluation(data, prediction)
         self.log_info(data, batch_idx,  prediction, status='train')
         # for k, v in losses.items():
@@ -148,13 +148,13 @@ class TrainerForecast(BaseModel):
 
     def validation_step(self, data, batch_idx):
         out = self(data)
-        converted_data = self.convert_to_fmae_format(data['input_dict'].copy()) ##TODO: maybe only do it once, not here and in forward?
+        converted_data = self.convert_to_fmae_format(data['input_dict'].copy()) 
         losses = self.cal_loss(out, converted_data)
 
         #unitraj
         prediction = {}
         prediction['predicted_trajectory'] = out["y_hat"][..., :2]
-        prediction['predicted_probability'] = out["pi"]
+        prediction['predicted_probability'] = torch.softmax(out["pi"].double(), dim=-1)
         self.compute_official_evaluation(data, prediction)
         self.log_info(data, batch_idx,  prediction, status='val')
 

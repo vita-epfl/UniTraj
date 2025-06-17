@@ -373,29 +373,29 @@ class BaseModel(pl.LightningModule):
         )
         data["x"][... , 0, 0:2] = torch.zeros(B, N_agent, 2)
 
-        #data["x_attr"] -> object type | object category | object type combined
+        #data["x_attr"] -> object type | object category | object type combined -> only third attribute is used in model
         data["x_attr"][:, :, 0] = 9 #unknown
         for center_idx, center_obj in enumerate(input["obj_trajs"]):
             for actor_idx, actor in enumerate(center_obj):
-                if actor[0][6] == 1:
+                if actor[h_steps - 1][6] == 1:
                     data["x_attr"][center_idx, actor_idx, 0] = 0 #vehicle
                     data["x_attr"][center_idx, actor_idx, 2] = 0 
-                elif actor[0][7] == 1:
+                elif actor[h_steps - 1][7] == 1:
                     data["x_attr"][center_idx, actor_idx, 0] = 1 #pedestrian
                     data["x_attr"][center_idx, actor_idx, 2] = 1
-                elif actor[0][8] == 1:
+                elif actor[h_steps - 1][8] == 1:
                     data["x_attr"][center_idx, actor_idx, 0] = 3 #bicycle
                     data["x_attr"][center_idx, actor_idx, 2] = 2
                 else:
                     data["x_attr"][center_idx, actor_idx, 0] = 9 #unknown
                     data["x_attr"][center_idx, actor_idx, 2] = 3
 
-                if actor[0][9] == 1:
-                    data["x_attr"][center_idx, actor_idx, 1] = 2 #SCORED_TRACK
-                if actor[0][10] == 1:
-                    data["x_attr"][center_idx, actor_idx, 1] = 3 #FOCAL_TRACK
-                if actor[0][9] == 0 and actor[0][10] == 0:
-                    data["x_attr"][center_idx, actor_idx, 1] = 1 #UNSCORED_TRACK
+                if actor[h_steps - 1][9] == 1:
+                    data["x_attr"][center_idx, actor_idx, 1] = 3 #FOCAL_TRACK -> track that is being predicted
+                if actor[h_steps - 1][10] == 1:
+                    data["x_attr"][center_idx, actor_idx, 1] = 3 #FOCAL_TRACK -> track that is being predicted & is the sdc track
+                if actor[h_steps - 1][9] == 0 and actor[0][10] == 0:
+                    data["x_attr"][center_idx, actor_idx, 1] = 2 #SCORED_TRACK -> track that is being scored -> TODO are there unscored tracks?
         data["x_positions"] = input["obj_trajs"][..., :h_steps, :2].clone()#torch.matmul(data["x"][..., 0:2] + data["origin"], rotate_mat)[..., :h_steps, :2].clone()
         data["x_centers"] = input["obj_trajs"][..., h_steps - 1, :2].clone() 
         data["x_angles"] = np.arcsin(input["obj_trajs"][..., h_steps+12].float())
@@ -403,12 +403,6 @@ class BaseModel(pl.LightningModule):
             (torch.from_numpy(np.linalg.norm(input["obj_trajs"][..., h_steps+14:h_steps+16], axis=-1)), 
              torch.from_numpy(np.linalg.norm(input["obj_trajs_future_state"][..., 2:], axis=-1))), 
              dim=-1)#np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1)#torch.cat((np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1), np.linalg.norm(input["obj_trajs_future_state"][..., 2:], axis=-1)), dim=-1)
-        data["x_velocity_diff"][..., 1:h_steps] = torch.where(
-            (~input["obj_trajs_mask"][..., :(h_steps - 1)] | ~input["obj_trajs_mask"][..., 1:h_steps]),
-            torch.zeros(B, N_agent, h_steps-1),
-            data["x_velocity"][..., 1:h_steps] - data["x_velocity"][..., :(h_steps - 1)],
-        )
-        data["x_velocity_diff"][..., 0] = torch.zeros(N_agent)
         data["lane_positions"] = input["map_polylines"][..., :2].clone()
         data["lane_centers"] = data["lane_positions"][:, :, ((lane_sampling_pts//2)-1):(lane_sampling_pts//2)+1].mean(dim=-2)
         data["lane_angles"] = torch.atan2(
@@ -426,11 +420,30 @@ class BaseModel(pl.LightningModule):
         )#input["obj_trajs_future_state"][..., :2].clone()
         data["x_padding_mask"] = torch.cat((~input["obj_trajs_mask"], ~input["obj_trajs_future_mask"]), dim=-1)
         data["lane_padding_mask"] = ~input["map_polylines_mask"].clone()
-        data["x_key_padding_mask"] = data["x_padding_mask"].all(-1)
         data["lane_key_padding_mask"] = data["lane_padding_mask"].all(-1)
         data["num_actors"] =  (~data["x_key_padding_mask"]).sum(-1)
         data["num_lanes"] = (~data["lane_key_padding_mask"]).sum(-1)
         data["scenario_id"] = input["scenario_id"]
+
+        data["x_padding_mask"] = torch.where(
+            torch.from_numpy(np.linalg.norm(data["x_positions"][..., h_steps - 1, :], axis=-1) > 150).unsqueeze(-1),
+            torch.ones_like(data["x_padding_mask"]),
+            data["x_padding_mask"]
+        )
+        data["x_padding_mask"] = torch.where(
+            (data["x_padding_mask"][..., h_steps - 1]).unsqueeze(-1),
+            torch.ones_like(data["x_padding_mask"]),
+            data["x_padding_mask"]
+        )
+        data["x_key_padding_mask"] = data["x_padding_mask"].all(-1)
+
+        data["x_velocity_diff"][..., 1:h_steps] = torch.where(
+            (~input["obj_trajs_mask"][..., :(h_steps - 1)] | ~input["obj_trajs_mask"][..., 1:h_steps]),
+            torch.zeros(B, N_agent, h_steps-1),
+            data["x_velocity"][..., 1:h_steps] - data["x_velocity"][..., :(h_steps - 1)],
+        )
+        data["x_velocity_diff"][..., 0] = torch.zeros(N_agent)
+
 
         #data["track_id"] information not present in input -> only used for av2 submission
 
