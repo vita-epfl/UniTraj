@@ -12,7 +12,7 @@ from torch_geometric.data import HeteroData, Batch
 from torch_geometric.data.storage import NodeStorage
 from torch_geometric.loader.dataloader import Collater
 from torch_geometric.transforms import BaseTransform
-from unitraj.models.smart.datasets.preprocess import TokenProcessor
+from unitraj.models.smart.smart_utils import TokenProcessor
 from .base_dataset import BaseDataset
 from metadrive.scenario.scenario_description import MetaDriveType
 from scenarionet.common_utils import read_scenario
