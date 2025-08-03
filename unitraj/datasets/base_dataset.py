@@ -436,11 +436,12 @@ class BaseDataset(Dataset):
         for k, v in ret_dict.items():
             if isinstance(v, np.ndarray) and v.dtype == np.float64:
                 ret_dict[k] = v.astype(np.float32)
-                
+
         if self.config['remove_outliers']:
             lane_samples = torch.from_numpy(map_polylines_data[..., :2]).view(-1, 2)
+            distances_to_nearest_lane = torch.cdist(torch.from_numpy(ret_dict["obj_trajs_pos"][:, 1:, self.config["past_len"]-1, :2]).float().cuda(), lane_samples.float().cuda()).min(dim=-1).values.cpu() #do calculation on GPU, on CPU it runs into timeout for EMP -> bug?
             ret_dict["obj_trajs_mask"][:, 1:] = np.array(torch.where(
-                (torch.cdist(torch.from_numpy(ret_dict["obj_trajs_pos"][:, 1:, self.config["past_len"]-1, :2]).float(), lane_samples.float()).min(dim=-1).values >= 5).unsqueeze(-1),
+                (distances_to_nearest_lane >= 5).unsqueeze(-1),
                 torch.zeros_like(torch.from_numpy(ret_dict["obj_trajs_mask"][:, 1:])),
                 torch.from_numpy(ret_dict["obj_trajs_mask"][:, 1:])
             ))
