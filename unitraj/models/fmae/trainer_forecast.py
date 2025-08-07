@@ -92,10 +92,13 @@ class TrainerForecast(BaseModel):
         with torch.no_grad():
             converted_data = self.convert_to_fmae_format(data['input_dict'].copy())
             out = self.net(converted_data)
-        predictions, prob = self.submission_handler.format_data(
-            data, out["y_hat"], out["pi"], inference=True
-        )
-        return predictions, prob
+        #predictions, prob = self.submission_handler.format_data(
+        #    data, out["y_hat"], out["pi"], inference=True
+        #)
+        prediction = {}
+        prediction['predicted_trajectory'] = out["y_hat"][..., :2]
+        prediction['predicted_probability'] = torch.softmax(out["pi"].double(), dim=-1)
+        return prediction
 
     def cal_loss(self, out, data):
         y_hat, pi, y_hat_others = out["y_hat"], out["pi"], out["y_hat_others"]

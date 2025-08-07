@@ -106,15 +106,18 @@ class TrainerEMP(BaseModel):
         return self.net(converted_data)
 
 
-    def predict(self, data, full=False):
+    def predict(self, data):
         with torch.no_grad():
             converted_data = self.convert_to_fmae_format(data['input_dict'].copy())
             out = self.net(converted_data)
-        predictions, prob = self.submission_handler.format_data(
-            data, out["y_hat"], out["pi"], inference=True
-        )
-        predictions = [predictions, out] if full else predictions
-        return predictions, prob    
+        #predictions, prob = self.submission_handler.format_data(
+        #    data, out["y_hat"], out["pi"], inference=True
+        #)
+        prediction = {}
+        prediction['predicted_trajectory'] = out["y_hat"][..., :2]# - data['input_dict']['obj_trajs'][:, 0, 20, 0:2].unsqueeze(-2).unsqueeze(-2)
+        prediction['predicted_probability'] = torch.softmax(out["pi"].double(), dim=-1)
+        #predictions = [predictions, out] if full else predictions
+        return prediction  
 
 
     def cal_loss(self, out, data, batch_idx=0):
