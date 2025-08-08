@@ -176,7 +176,7 @@ def _plot_static_map_elements(
             [lane_segment[cur_mask]], line_width=2.0, color="#000000", alpha=0.2, style="--"
         )
         _plot_polylines(
-            [lane_segment],
+            [lane_segment[cur_mask]],
             line_width=3,
             color=[0.3, 0.3, 0.3],
             endpoint=True,
