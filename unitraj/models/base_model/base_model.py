@@ -60,6 +60,11 @@ class BaseModel(pl.LightningModule):
         self.log_info(batch, batch_idx, prediction, status='val')
         return loss
 
+    def predict(self, batch):
+        prediction, loss = self.forward(batch)
+        return prediction
+
+
     def on_validation_epoch_end(self):
         if self.config.get('eval_waymo', False):
             metric_results, result_format_str = self.compute_metrics_waymo(self.pred_dicts)

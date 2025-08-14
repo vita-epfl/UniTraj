@@ -40,17 +40,19 @@ def visualize(cfg):
     
 
     for batch in train_loader:
+        input = batch['input_dict']
+        input_cpu = input.copy()
+        for k in input.keys():
+            if torch.is_tensor(input[k]):
+                input[k] = input[k].cuda()
         if predict:
-            for k in batch.keys():
-                if torch.is_tensor(batch[k]): batch[k] = batch[k].cuda()
             with torch.no_grad():
                 batch_pred = model.predict(batch)
-        input = batch['input_dict']
         for idx_in_batch in range(batch['batch_size']):
             if predict:
-                visualize_scenario(input, idx_in_batch, timestep=cfg.get('past_len'), show_history=True, show_future=True, show_map=True, prediction=batch_pred['predicted_trajectory'].cpu(), predicition_probs=batch_pred['predicted_probability'].cpu())
+                visualize_scenario(input_cpu, idx_in_batch, timestep=cfg.get('past_len'), show_history=True, show_future=True, show_map=True, prediction=batch_pred['predicted_trajectory'].cpu(), predicition_probs=batch_pred['predicted_probability'].cpu())
             else:
-                visualize_scenario(input, idx_in_batch, timestep=cfg.get('past_len'), show_history=True, show_future=True, show_map=True)
+                visualize_scenario(input_cpu, idx_in_batch, timestep=cfg.get('past_len'), show_history=True, show_future=True, show_map=True)
             plt.show()
 
 
