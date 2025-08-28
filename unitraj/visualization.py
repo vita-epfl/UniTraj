@@ -18,6 +18,9 @@ import matplotlib.pyplot as plt
 import torch.multiprocessing as mp
 mp.set_start_method('spawn', force=True)
 
+SHOW_ROADLINES = False
+SHOW_PED_XINGS = True
+
 
 @hydra.main(version_base=None, config_path="configs", config_name="config")
 def visualize(cfg):
@@ -50,9 +53,12 @@ def visualize(cfg):
                 batch_pred = model.predict(batch)
         for idx_in_batch in range(batch['batch_size']):
             if predict:
-                visualize_scenario(input_cpu, idx_in_batch, timestep=cfg.get('past_len'), show_history=True, show_future=True, show_map=True, prediction=batch_pred['predicted_trajectory'].cpu(), predicition_probs=batch_pred['predicted_probability'].cpu())
+                visualize_scenario(input_cpu, idx_in_batch, timestep=cfg.get('past_len'), show_history=True, show_future=True, show_map=True, 
+                                   prediction=batch_pred['predicted_trajectory'].cpu(), predicition_probs=batch_pred['predicted_probability'].cpu(), 
+                                   show_roadlines=SHOW_ROADLINES, show_ped_xings=SHOW_PED_XINGS)
             else:
-                visualize_scenario(input_cpu, idx_in_batch, timestep=cfg.get('past_len'), show_history=True, show_future=True, show_map=True)
+                visualize_scenario(input_cpu, idx_in_batch, timestep=cfg.get('past_len'), show_history=True, show_future=True, show_map=True, 
+                                   show_roadlines=SHOW_ROADLINES, show_ped_xings=SHOW_PED_XINGS)
             plt.show()
 
 

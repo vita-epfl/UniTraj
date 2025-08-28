@@ -61,7 +61,9 @@ def visualize_scenario(
     show_future=True,
     show_history=True,
     show_map=False,
-    best_pred=0
+    best_pred=0,
+    show_roadlines=False,
+    show_ped_xings=False
 ) -> None:
     if create_fig:
         fig, ax = plt.subplots(1, 1, figsize=(8, 8))
@@ -69,10 +71,11 @@ def visualize_scenario(
         ax = plt.gca()
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-    if title != "": plt.title(title)
+    title = "Scenario: " + str(input['scenario_id'][batch_idx]) + "\n Center Object: " + str(input['center_objects_id'][batch_idx]) + "\n Lanes in thick black lines, road edge lines in thin grey lines, crosswalks in red lines"
+    plt.title(title)
 
     # Plot static map elements and actor tracks
-    if show_map: _plot_static_map_elements(input, batch_idx, True)
+    if show_map: _plot_static_map_elements(input, batch_idx, show_ped_xings, show_roadlines)
     cur_plot_bounds = _plot_actor_tracks(ax, input, batch_idx, timestep, show_history, show_future, show_map)
     print(cur_plot_bounds)
     plot_bounds = cur_plot_bounds
@@ -157,7 +160,7 @@ def visualize_scenario(
 
 
 def _plot_static_map_elements(
-    input, batch_idx, show_ped_xings: bool = False
+    input, batch_idx, show_ped_xings: bool = False, show_roadlines: bool = False
 ) -> None:
     """Plot all static map elements associated with an Argoverse scenario.
 
@@ -167,30 +170,25 @@ def _plot_static_map_elements(
     """
     # Plot drivable areas
 
-    #_plot_polygons([drivable_area[..., :2] for drivable_area in input['map_polylines'][batch_idx]], alpha=0.3, color=_DRIVABLE_AREA_COLOR)
-    # Plot lane segments
+  
     for lane_idx, lane_segment in enumerate(input['map_polylines'][batch_idx]):
-        #centerline = static_map.get_lane_segment_centerline(lane_segment.id)
         cur_mask = input['map_polylines_mask'][batch_idx][lane_idx]
-        _plot_polylines(
-            [lane_segment[cur_mask]], line_width=2.0, color="#000000", alpha=0.2, style="--"
-        )
-        _plot_polylines(
-            [lane_segment[cur_mask]],
-            line_width=3,
-            color=[0.3, 0.3, 0.3],
-            endpoint=True,
-            zorder=98,
-        )
+        if show_roadlines and lane_segment[0, 9 + 7] == 1: #white road line
+            _plot_polylines(np.array([lane_segment[cur_mask][..., :2]]), line_width=1.0, color=_DRIVABLE_AREA_COLOR)
+        if lane_segment[0, 9 + 1] == 1 or lane_segment[0, 9 + 2] == 1 or lane_segment[0, 9 + 3] == 1: #lanes
+            _plot_polylines(
+                [lane_segment[cur_mask]], line_width=2.0, color="#000000", alpha=0.2, style="--"
+            )
+            _plot_polylines(
+                [lane_segment[cur_mask]],
+                line_width=3,
+                color=[0.3, 0.3, 0.3],
+                endpoint=True,
+                zorder=98,
+            )
+        if show_ped_xings and lane_segment[0, 9 + 18] == 1: #crosswalk
+             _plot_polylines(np.array([lane_segment[cur_mask][..., :2]]), line_width=1.0, color="red")
 
-    # # Plot pedestrian crossings
-    # if show_ped_xings:
-    #     for ped_xing in static_map.vector_pedestrian_crossings.values():
-    #         _plot_polylines(
-    #             [ped_xing.edge1.xyz, ped_xing.edge2.xyz],
-    #             alpha=1.0,
-    #             color="white",
-    #         )
 
 
 def _plot_actor_tracks(
@@ -217,18 +215,6 @@ def _plot_actor_tracks(
 
     for idx, track in enumerate(input['obj_trajs_pos'][batch_idx]):
         if idx != 0 and not show_map: continue
-        if idx > 10: break  # Limit to first 10 actors for visualization
-        # Get timesteps for which actor data is valid
-        # actor_timesteps: NDArrayInt = np.array(
-        #     [
-        #         object_state.timestep
-        #         for object_state in track.object_states
-        #         if object_state.timestep <= timestep
-        #     ]
-        # )
-
-        # if actor_timesteps.shape[0] < 1 or actor_timesteps[-1] != timestep:
-        #     continue
 
         future_trajectory: NDArrayFloat = np.array(
             [
@@ -255,29 +241,30 @@ def _plot_actor_tracks(
         # Plot polyline for focal agent location history
         track_color = _DEFAULT_ACTOR_COLOR
         from matplotlib.colors import LinearSegmentedColormap
+        if input["obj_trajs"][batch_idx][idx][timestep-1][6] == 0 and input["obj_trajs"][batch_idx][idx][timestep-1][7] == 0 and input["obj_trajs"][batch_idx][idx][timestep-1][8] == 0: #other
+            continue
 
         predcmp = LinearSegmentedColormap.from_list("pred", [[105/255.0, 172/255.0, 160/255.0], [180/255.0, 214/255.0, 208/255.0]], N=256)
+        
+        if len(history_trajectory) == 0:
+            continue
         if len(future_trajectory) > 0 and show_future:
             _scatter_polylines(
                 [future_trajectory],
                 cmap=predcmp,#"Greens",
-                linewidth=12,
+                linewidth=4,
                 reverse=False,
                 arrow=False,
                 alpha=1.0,
                 zorder=199
             )
-        else:
-            continue
-        #elif track.object_type in _STATIC_OBJECT_TYPES:
-        #    continue
+
 
         track_color = _DEFAULT_ACTOR_COLOR
         hist_cmap = LinearSegmentedColormap.from_list("pred", [[126/255.0, 135/255.0, 167/255.0], [44/255.0, 51/255.0, 80/255.0]], N=128) 
         if len(history_trajectory) > 0 and show_history: 
-            _scatter_polylines([history_trajectory], cmap=hist_cmap, linewidth=8, arrow=False, alpha=0.9)
-        else:
-            continue
+            _scatter_polylines([history_trajectory], cmap=hist_cmap, linewidth=4, arrow=False, alpha=0.9)
+
         
         if idx == 0:
             track_bounds = history_trajectory[-1]
@@ -300,15 +287,17 @@ def _plot_actor_tracks(
                 track_color,
                 (_ESTIMATED_CYCLIST_LENGTH_M, _ESTIMATED_CYCLIST_WIDTH_M),
             )
-        else:
+        elif input["obj_trajs"][batch_idx][idx][timestep-1][7] == 1: #pedestrian
             plt.plot(
                 history_trajectory[-1, 0],
                 history_trajectory[-1, 1],
                 "o",
                 color=track_color,
-                markersize=11,
+                markersize=7,
                 zorder=999
             )
+        else:
+            continue
 
     return track_bounds
 
