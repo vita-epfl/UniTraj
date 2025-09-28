@@ -19,7 +19,7 @@ def data_analysis(cfg):
     cfg = OmegaConf.merge(cfg, cfg.method)
 
     train_set = build_dataset(cfg)
-    train_batch_size = max(cfg.method['train_batch_size'] // len(cfg.devices), 1)
+    train_batch_size = max(cfg.method['train_batch_size'] // len(cfg.devices),  1)
     train_loader = DataLoader(
         train_set, batch_size=train_batch_size, num_workers=cfg.load_num_workers, drop_last=False,
         collate_fn=train_set.collate_fn)

@@ -1,7 +1,8 @@
 import math
 import os
 import random
-
+import h5py
+import pickle
 import numpy as np
 import torch
 from scipy.interpolate import interp1d
@@ -19,6 +20,75 @@ def get_polyline_dir(polyline):
     polyline_dir = diff / np.clip(np.linalg.norm(diff, axis=-1)[:, np.newaxis], a_min=1e-6, a_max=1000000000)
     return polyline_dir
 
+def get_polyline_mag(polyline):
+    polyline_pre = np.roll(polyline, shift=1, axis=0)
+    polyline_pre[0] = polyline[0]
+    diff = polyline - polyline_pre
+
+    magnitude = np.linalg.norm(diff, axis=-1)
+    return magnitude
+
+def merge_tuple_key(k):
+    if isinstance(k, tuple):
+        return '_'.join(k)
+    return str(k)
+
+def save_item(grp, key, value):
+    if isinstance(value, str):
+        dt = h5py.string_dtype('utf-8')
+        grp.create_dataset(key, data=value, dtype=dt)
+
+    elif isinstance(value, (int, float, bool, np.number)):
+        grp.create_dataset(key, data=value)
+
+    elif isinstance(value, np.ndarray):
+        if value.dtype != object:
+            grp.create_dataset(key, data=value)
+        else:
+            blob = pickle.dumps(value)
+            grp.create_dataset(key, data=np.void(blob))
+
+    elif isinstance(value, (list, tuple)):
+        try:
+            arr = np.asarray(value)
+            if arr.dtype != object:
+                grp.create_dataset(key, data=arr)
+                return
+        except Exception:
+            pass
+        sub = grp.create_group(key)
+        for idx, v in enumerate(value):
+            save_item(sub, str(idx), v)
+
+    elif isinstance(value, dict):
+        sub = grp.create_group(key)
+        for k, v in value.items():
+            save_item(sub, k, v)
+
+    else:
+        blob = pickle.dumps(value)
+        grp.create_dataset(key, data=np.void(blob))
+def load_item(h5obj):
+    if isinstance(h5obj, h5py.Dataset):
+        if h5obj.dtype == np.dtype('V1') or h5obj.dtype.kind == 'V':
+            return pickle.loads(bytes(h5obj[()]))
+
+        if h5obj.dtype.kind in ('S', 'O', 'U'):
+            data = h5obj[()]
+            if isinstance(data, (bytes, np.bytes_)):
+                return data.decode('utf-8')
+            return np.vectorize(lambda b: b.decode('utf-8'))(data)
+
+        return h5obj[()]
+
+    elif isinstance(h5obj, h5py.Group):
+        out = {}
+        for k in h5obj.keys():
+            out[k] = load_item(h5obj[k])
+        return out
+
+    else:  # should not reach here
+        raise TypeError(f'Unexpected HDF5 object: {type(h5obj)}')
 
 def check_numpy_to_torch(x):
     if isinstance(x, np.ndarray):

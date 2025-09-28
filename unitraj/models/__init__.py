@@ -4,6 +4,7 @@ from unitraj.models.wayformer.wayformer import Wayformer
 from unitraj.models.fmae.trainer_mae import TrainerMAE
 from unitraj.models.fmae.trainer_forecast import TrainerForecast
 from unitraj.models.emp.trainer_forecast import TrainerEMP
+from unitraj.models.smart.smart import SMART
 
 __all__ = {
     'autobot': AutoBotEgo,
@@ -12,6 +13,7 @@ __all__ = {
     'MAE': TrainerMAE,
     'forecast': TrainerForecast,
     'EMP': TrainerEMP,
+    'SMART': SMART,
 }
 
 
