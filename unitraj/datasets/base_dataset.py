@@ -126,8 +126,6 @@ class BaseDataset(Dataset):
 
                     output = self.postprocess(output)
 
-                    output = self.convert_to_model_specific_format(output)
-
                 except Exception as e:
                     print('Warning: {} in {}'.format(e, file_name))
                     output = None
@@ -187,6 +185,7 @@ class BaseDataset(Dataset):
             all_state = all_state[starting_fame:ending_fame]
 
             assert all_state.shape[0] == total_steps, f'Error: {all_state.shape[0]} != {total_steps}'
+            
             track_infos['object_id'].append(k)
             track_infos['object_type'].append(object_type[v['type']])
             track_infos['trajs'].append(all_state)
@@ -437,7 +436,7 @@ class BaseDataset(Dataset):
             if isinstance(v, np.ndarray) and v.dtype == np.float64:
                 ret_dict[k] = v.astype(np.float32)
 
-        if self.config['remove_outliers']:
+        if self.config['remove_outliers']: #remove agents that are further away than 5m from the nearest lane at the central time step -> filtering step done in fmae/emp data preprocessing
             lane_samples = torch.from_numpy(map_polylines_data[..., :2]).view(-1, 2)
             distances_to_nearest_lane = torch.cdist(torch.from_numpy(ret_dict["obj_trajs_pos"][:, 1:, self.config["past_len"]-1, :2]).float().cuda(), lane_samples.float().cuda()).min(dim=-1).values.cpu() #do calculation on GPU, on CPU it runs into timeout for EMP -> bug?
             ret_dict["obj_trajs_mask"][:, 1:] = np.array(torch.where(
@@ -466,9 +465,6 @@ class BaseDataset(Dataset):
         # Add the trajectory type (stationary, straight, right turn...)
         get_trajectory_type(output)
 
-        return output
-    
-    def convert_to_model_specific_format(self, output):
         return output
 
     def collate_fn(self, data_list):
@@ -669,7 +665,6 @@ class BaseDataset(Dataset):
             center_objects_list.append(obj_trajs_full[obj_idx, current_time_index])
             track_index_to_predict_selected.append(obj_idx)
         if len(center_objects_list) == 0:
-            print(f'Warning: no center objects at time step {current_time_index}, scene_id={scene_id}')
             return None, []
         center_objects = np.stack(center_objects_list, axis=0)  # (num_center_objects, num_attrs)
         track_index_to_predict = np.array(track_index_to_predict_selected)
