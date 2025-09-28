@@ -336,7 +336,7 @@ class BaseModel(pl.LightningModule):
         N_lane = self.config["max_num_roads"] #80 #maximum number of lane segments per scenario --> get from config file
         h_steps = self.config["past_len"]#50 #num historical timesteps for agent tracks --> get from config file
         f_steps = self.config["future_len"] #60 #num future timesteps for agent tracks --> get from config file
-        lane_sampling_pts = self.config["max_points_per_lane"] #TODO:not sure if this is the right value #20 #sampling points per lane segment --> get from config file
+        lane_sampling_pts = self.config["max_points_per_lane"]
         data = {
             "x": torch.rand(B, N_agent, h_steps, 2), #agent tracks as local differences from origin being the last position of the past trajectory
             "x_attr": torch.zeros((B, N_agent, 3), dtype=torch.uint8), #categorical agent attributes
@@ -362,10 +362,9 @@ class BaseModel(pl.LightningModule):
             "origin": torch.rand(B, 2), #scene to global coordinates position
             "theta": torch.rand(B), #scene to global coordinates orientation
         }
-        if not self.config["debug"]:
-            for key, value in input.items():
-                if isinstance(value, torch.Tensor):
-                        input[key] = input[key].to("cpu")
+        for key, value in input.items():
+            if isinstance(value, torch.Tensor):
+                    input[key] = input[key].to("cpu")
 
         data["origin"] = input["center_objects_world"][..., 0:2].clone()
         data["theta"] = input["center_objects_world"][..., 6].clone()
@@ -399,14 +398,14 @@ class BaseModel(pl.LightningModule):
                 if actor[h_steps - 1][10] == 1:
                     data["x_attr"][center_idx, actor_idx, 1] = 3 #FOCAL_TRACK -> track that is being predicted & is the sdc track
                 if actor[h_steps - 1][9] == 0 and actor[0][10] == 0:
-                    data["x_attr"][center_idx, actor_idx, 1] = 2 #SCORED_TRACK -> track that is being scored -> TODO are there unscored tracks?
-        data["x_positions"] = input["obj_trajs"][..., :h_steps, :2].clone()#torch.matmul(data["x"][..., 0:2] + data["origin"], rotate_mat)[..., :h_steps, :2].clone()
+                    data["x_attr"][center_idx, actor_idx, 1] = 2 #SCORED_TRACK -> track that is being scored
+        data["x_positions"] = input["obj_trajs"][..., :h_steps, :2].clone()
         data["x_centers"] = input["obj_trajs"][..., h_steps - 1, :2].clone() 
         data["x_angles"] = np.arcsin(input["obj_trajs"][..., h_steps+12].float())
         data["x_velocity"] = torch.cat(
             (torch.from_numpy(np.linalg.norm(input["obj_trajs"][..., h_steps+14:h_steps+16], axis=-1)), 
              torch.from_numpy(np.linalg.norm(input["obj_trajs_future_state"][..., 2:], axis=-1))), 
-             dim=-1)#np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1)#torch.cat((np.linalg.norm(input["obj_trajs"][..., 35:37], axis=-1), np.linalg.norm(input["obj_trajs_future_state"][..., 2:], axis=-1)), dim=-1)
+             dim=-1)
         data["lane_positions"] = input["map_polylines"][..., :2].clone()
         data["lane_centers"] = data["lane_positions"][:, :, ((lane_sampling_pts//2)-1):(lane_sampling_pts//2)+1].mean(dim=-2)
         data["lane_angles"] = torch.atan2(
@@ -421,7 +420,7 @@ class BaseModel(pl.LightningModule):
             (~input["obj_trajs_mask"][..., (h_steps - 1)].unsqueeze(-1) | ~input["obj_trajs_future_mask"][..., :]).unsqueeze(-1),
             torch.zeros(B, N_agent, f_steps, 2),
             input["obj_trajs_future_state"][..., :, 0:2] - input["obj_trajs"][..., (h_steps - 1), 0:2].unsqueeze(-2),
-        )#input["obj_trajs_future_state"][..., :2].clone()
+        )
         data["x_padding_mask"] = torch.cat((~input["obj_trajs_mask"], ~input["obj_trajs_future_mask"]), dim=-1)
         data["lane_padding_mask"] = ~input["map_polylines_mask"].clone()
         data["lane_key_padding_mask"] = data["lane_padding_mask"].all(-1)

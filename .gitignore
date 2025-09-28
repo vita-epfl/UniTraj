@@ -1,7 +1,8 @@
-/unitraj/unitraj_ckpt/
+/unitraj/ckpt/
 /unitraj/lightning_logs/
 /unitraj/outputs/
 /unitraj/tmp
+.DS_Store
 /unitraj/data_samples
 /build
 /outputs

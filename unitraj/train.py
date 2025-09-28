@@ -20,7 +20,7 @@ def train(cfg):
     cfg = OmegaConf.merge(cfg, cfg.method)
 
     model = build_model(cfg)
-    print(cfg.method.model_name)
+
     train_set = build_dataset(cfg)
     val_set = build_dataset(cfg, val=True)
 
@@ -62,10 +62,8 @@ def train(cfg):
     # automatically resume training
     if cfg.ckpt_path is None and not cfg.debug:
         # Pattern to match all .ckpt files in the base_path recursively
-        search_pattern = os.path.join('./unitraj_ckpt', cfg.exp_name, '**', '*.ckpt')
+        search_pattern = os.path.join('./unitraj', cfg.exp_name, '**', '*.ckpt')
         cfg.ckpt_path = find_latest_checkpoint(search_pattern)
-        print(f"Found checkpoint: {cfg.ckpt_path}")
-
 
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader, ckpt_path=cfg.ckpt_path)
 
