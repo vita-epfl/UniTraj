@@ -185,7 +185,7 @@ class BaseDataset(Dataset):
             all_state = all_state[starting_fame:ending_fame]
 
             assert all_state.shape[0] == total_steps, f'Error: {all_state.shape[0]} != {total_steps}'
-
+            
             track_infos['object_id'].append(k)
             track_infos['object_type'].append(object_type[v['type']])
             track_infos['trajs'].append(all_state)
@@ -234,7 +234,8 @@ class BaseDataset(Dataset):
                     cur_info['left_boundary'] = []
                     cur_info['right_boundary'] = []
                 polyline = v['polyline']
-                polyline = interpolate_polyline(polyline)
+                if self.config["max_points_per_lane"] > polyline.shape[0] and (self.config["method"]["model_name"] != "forecast" and self.config ["method"]["model_name"]  != "EMP"): #for those models the data should already be interpolated correctly for pretrained checkpoints to work properly
+                    polyline = interpolate_polyline(polyline)
                 map_infos['lane'].append(cur_info)
             elif polyline_type_ in [6, 7, 8, 9, 10, 11, 12, 13]:
                 try:
@@ -435,6 +436,15 @@ class BaseDataset(Dataset):
             if isinstance(v, np.ndarray) and v.dtype == np.float64:
                 ret_dict[k] = v.astype(np.float32)
 
+        if self.config['remove_outliers']: #remove agents that are further away than 5m from the nearest lane at the central time step -> filtering step done in fmae/emp data preprocessing
+            lane_samples = torch.from_numpy(map_polylines_data[..., :2]).view(-1, 2)
+            distances_to_nearest_lane = torch.cdist(torch.from_numpy(ret_dict["obj_trajs_pos"][:, 1:, self.config["past_len"]-1, :2]).float().cuda(), lane_samples.float().cuda()).min(dim=-1).values.cpu() #do calculation on GPU, on CPU it runs into timeout for EMP -> bug?
+            ret_dict["obj_trajs_mask"][:, 1:] = np.array(torch.where(
+                (distances_to_nearest_lane >= 5).unsqueeze(-1),
+                torch.zeros_like(torch.from_numpy(ret_dict["obj_trajs_mask"][:, 1:])),
+                torch.from_numpy(ret_dict["obj_trajs_mask"][:, 1:])
+            ))
+
         ret_dict['map_center'] = ret_dict['map_center'].repeat(sample_num, axis=0)
         ret_dict['dataset_name'] = [info['dataset']] * sample_num
 
@@ -633,7 +643,7 @@ class BaseDataset(Dataset):
                                        ((0, 0), (0, max_num_agents - obj_trajs_future_mask.shape[1]), (0, 0)))
 
         return (obj_trajs_data, obj_trajs_mask.astype(bool), obj_trajs_pos, obj_trajs_last_pos,
-                obj_trajs_future_state, obj_trajs_future_mask, center_gt_trajs, center_gt_trajs_mask,
+                obj_trajs_future_state, obj_trajs_future_mask.astype(bool), center_gt_trajs, center_gt_trajs_mask,
                 center_gt_final_valid_idx,
                 track_index_to_predict_new)
 
@@ -649,6 +659,7 @@ class BaseDataset(Dataset):
                 print(f'Warning: obj_idx={obj_idx} is not valid at time step {current_time_index}, scene_id={scene_id}')
                 continue
             if obj_types[obj_idx] not in selected_type:
+                print(f'Warning: object type in data is not a selected type for scene_id={scene_id}')
                 continue
 
             center_objects_list.append(obj_trajs_full[obj_idx, current_time_index])

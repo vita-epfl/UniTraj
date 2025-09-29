@@ -1,0 +1,37 @@
+# common
+model_name: EMP
+num_encoder_layers: 4
+num_decoder_layers: 4
+mlp_ratio: 4.0
+dim: 128
+qkv_bias: False
+drop_path: 0.2
+tx_num_heads: 8
+loss_weight: [1.0, 1.0, 0.35]
+weight_decay: 1e-4
+
+# train
+max_epochs: 100 #150 #40
+warmup_epochs: 10
+learning_rate: 1e-3 # 0.00075 # 1e-3 for lanegcn
+train_batch_size: 32 #32 #128
+eval_batch_size: 64 #32 #128
+grad_clip_norm: 5
+actor_mask_ratio: 0.5
+lane_mask_ratio: 0.5
+decoder: mlp #detr
+pretrained_weights: null #./models/emp/pretrained_weights/empm.ckpt
+
+# data related
+max_num_agents: 100
+map_range: 150
+max_num_roads: 256
+max_points_per_lane: 20 # will be overwritten if manually_split_lane is True
+# lane split related params
+manually_split_lane: False # if True, lanes will be split with the same number of points and length, else, lanes will be split with the same number of points but varying length
+point_sampled_interval: 1 # only used when manually_split_lane is True, the interval of points sampled from the original lane
+num_points_each_polyline: 20 # only used when manually_split_lane is True, the number of points in each polyline
+vector_break_dist_thresh: 1.0 # only used when manually_split_lane is True, the distance threshold to break the vector to split the lane
+
+
+

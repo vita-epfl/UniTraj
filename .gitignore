@@ -3,3 +3,15 @@
 /unitraj/outputs/
 /unitraj/tmp
 .DS_Store
+/unitraj/data_samples
+/build
+/outputs
+*.pyc
+/unitraj/cache
+/unitraj/wandb
+.DS_Store
+/UniTraj.egg-info
+*.log
+*.deb
+*.so
+unitraj/models/fmae/pretrained_weights/mae_pretrain_vod_56.ckpt
