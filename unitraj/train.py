@@ -55,8 +55,10 @@ def train(cfg):
         # accumulate_grad_batches=cfg.method.Trainer.accumulate_grad_batches,
         accelerator="cpu" if cfg.debug else "gpu",
         profiler="simple",
-        strategy="auto" if cfg.debug else "ddp",
-        callbacks=call_backs
+        strategy=cfg.method.get('strategy', 'auto') if cfg.debug else 'ddp',
+        callbacks=call_backs,
+        sync_batchnorm=cfg.method.get('sync_batchnorm', False),
+        gradient_clip_algorithm=cfg.method.get('gradient_clip_algorithm', None),
     )
 
     # automatically resume training

@@ -21,6 +21,9 @@ and [WandB](https://wandb.ai/site), the framework is easy to configure, train an
 ![system](docs/assets/support.png)
 
 ## 📰 News & Updates
+### Feb. 2026
+
+- 🔥 UniTraj now supports [Streaming Real-Time Trajectory Prediction Using Endpoint-Aware Modeling (SEAM)](https://github.com/a-pru/seam)!
 
 ### Sep. 2025
 
@@ -86,6 +89,7 @@ unitraj
 │   │   ├── MAE.yaml
 │   │   ├── forecast.yaml
 │   │   ├── EMP.yaml
+│   │   ├── SEAM.yaml
 ├── datasets
 │   ├── base_dataset.py
 │   ├── autobot_dataset.py
@@ -93,12 +97,14 @@ unitraj
 │   ├── MTR_dataset.py
 │   ├── fmae_dataset.py
 │   ├── EMP_dataset.py
+│   ├── SEAM_dataset.py
 ├── models
 │   ├── autobot
 │   ├── mtr
 │   ├── wayformer
 │   ├── fmae
 │   ├── emp
+│   ├── seam
 │   ├── base_model
 ├── utils
 ```

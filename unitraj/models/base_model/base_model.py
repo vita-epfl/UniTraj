@@ -4,6 +4,7 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 import wandb
+from torch.nn.utils.rnn import pad_sequence
 
 import unitraj.datasets.common_utils as common_utils
 import unitraj.utils.visualization as visualization
@@ -401,7 +402,11 @@ class BaseModel(pl.LightningModule):
                     data["x_attr"][center_idx, actor_idx, 1] = 2 #SCORED_TRACK -> track that is being scored
         data["x_positions"] = input["obj_trajs"][..., :h_steps, :2].clone()
         data["x_centers"] = input["obj_trajs"][..., h_steps - 1, :2].clone() 
-        data["x_angles"] = np.arcsin(input["obj_trajs"][..., h_steps+12].float())
+        #data["x_angles"] = np.arcsin(input["obj_trajs"][..., h_steps+12].float())
+        data["x_angles"] = torch.atan2(
+            input["obj_trajs"][..., h_steps+12].float(),  # sin(heading)
+            input["obj_trajs"][..., h_steps+13].float()   # cos(heading)
+        )
         data["x_velocity"] = torch.cat(
             (torch.from_numpy(np.linalg.norm(input["obj_trajs"][..., h_steps+14:h_steps+16], axis=-1)), 
              torch.from_numpy(np.linalg.norm(input["obj_trajs_future_state"][..., 2:], axis=-1))), 
@@ -455,6 +460,242 @@ class BaseModel(pl.LightningModule):
                 if isinstance(value, torch.Tensor):
                         data[key] = data[key].cuda()
         return data
+
+    def create_seam_stream_sequence(self, input, split_points=None, radius=150.0):
+        h_steps = self.config["past_len"]
+        f_steps = self.config["future_len"]
+        
+        if split_points is None:
+            split_points = [h_steps]
+        fmae_data = self.convert_to_fmae_format(input)
+        sequence_data = []
+        
+        for step in split_points:
+            frame_data = self._create_seam_frame_at_step(fmae_data, step, h_steps, f_steps, radius)
+            sequence_data.append(frame_data)
+        
+        return sequence_data
+
+    def _create_seam_frame_at_step(self, fmae_data, step, h_steps, f_steps, radius):
+        B = fmae_data['x'].shape[0]
+        device = fmae_data['x_positions'].device
+
+        stream_h_steps = self.config.get("stream_past_len", 30)
+        stream_f_steps = self.config.get("stream_future_len", 80)
+
+        pos_hist = fmae_data['x_positions']
+        pos_last = pos_hist[:, :, stream_h_steps - 1, :]
+        pos_future = fmae_data['y'] + pos_last.unsqueeze(2)
+        pos_full = torch.cat([pos_hist, pos_future], dim=2)
+
+        x_angles_hist = fmae_data['x_angles']
+        x_velocity_full = fmae_data['x_velocity']
+        x_valid_full = ~fmae_data['x_padding_mask']
+
+        x_positions_diff_list = []
+        x_attr_list = []
+        x_positions_list = []
+        x_centers_list = []
+        x_angles_list = []
+        x_velocity_list = []
+        x_velocity_diff_list = []
+        x_valid_mask_list = []
+
+        lane_positions_list = []
+        lane_centers_list = []
+        lane_angles_list = []
+        lane_attr_list = []
+        lane_valid_mask_list = []
+        is_intersections_list = []
+
+        target_list = []
+        target_mask_list = []
+
+        origin_list = []
+        theta_list = []
+
+        for cur_batch_idx in range(B):
+            focal_idx = 0
+            origin = pos_full[cur_batch_idx, focal_idx, step - 1]
+            theta = x_angles_hist[cur_batch_idx, focal_idx, step - 1]
+
+            rotate_mat = torch.stack(
+                [
+                    torch.stack([torch.cos(theta), -torch.sin(theta)], dim=-1),
+                    torch.stack([torch.sin(theta), torch.cos(theta)], dim=-1),
+                ],
+                dim=-2,
+            )
+
+            ag_mask = torch.norm(pos_full[cur_batch_idx, :, step - 1] - origin, dim=-1) < radius
+            ag_mask = ag_mask * x_valid_full[cur_batch_idx, :, step - 1]
+            ag_mask[focal_idx] = False
+
+            st = step - stream_h_steps
+            ed = step + stream_f_steps
+            idxs = torch.cat([
+                torch.tensor([focal_idx], device=device),
+                torch.where(ag_mask)[0]
+            ])
+
+            attr = fmae_data['x_attr'][cur_batch_idx, idxs]
+            pos = pos_full[cur_batch_idx, idxs, st: ed]
+            head = x_angles_hist[cur_batch_idx, idxs, st: st+stream_h_steps]
+            vel = x_velocity_full[cur_batch_idx, idxs, st: ed]
+            valid_mask = x_valid_full[cur_batch_idx, idxs, st: ed]
+            valid_mask_hist = valid_mask[:, :stream_h_steps]
+
+            pos[valid_mask] = torch.matmul(pos[valid_mask] - origin, rotate_mat)
+            head[valid_mask_hist] = (head[valid_mask_hist] - theta + np.pi) % (2 * np.pi) - np.pi
+
+            l_pos = fmae_data['lane_positions'][cur_batch_idx]
+            l_attr = fmae_data['lane_attr'][cur_batch_idx]
+            l_is_int = fmae_data['is_intersections'][cur_batch_idx]
+
+            lane_valid_mask_all = ~fmae_data['lane_key_padding_mask'][cur_batch_idx]  # True for real lanes
+            lane_point_valid_mask_all = ~fmae_data['lane_padding_mask'][cur_batch_idx]  # True for real points
+            l_pos = l_pos[lane_valid_mask_all]
+            l_attr = l_attr[lane_valid_mask_all]
+            l_is_int = l_is_int[lane_valid_mask_all]
+            l_point_valid = lane_point_valid_mask_all[lane_valid_mask_all]
+
+            number_of_lanes = l_pos.shape[0]
+            lane_length = l_pos.shape[1]
+
+            l_pos = torch.matmul(l_pos.reshape(-1, 2) - origin, rotate_mat).reshape(number_of_lanes, lane_length, 2)
+            lane_midpoint = lane_length // 2
+            l_ctr = l_pos[:, lane_midpoint - 1: lane_midpoint + 1].mean(dim=1)
+            l_head = torch.atan2(
+                l_pos[:, lane_midpoint, 1] - l_pos[:, lane_midpoint - 1, 1],
+                l_pos[:, lane_midpoint, 0] - l_pos[:, lane_midpoint - 1, 0],
+            )
+
+            l_valid_mask = (
+                l_point_valid
+                & (l_pos[:, :, 0] > -radius)
+                & (l_pos[:, :, 0] < radius)
+                & (l_pos[:, :, 1] > -radius)
+                & (l_pos[:, :, 1] < radius)
+            )
+
+            l_mask = l_valid_mask.any(dim=-1)
+            l_pos = l_pos[l_mask]
+            l_is_int = l_is_int[l_mask]
+            l_attr = l_attr[l_mask]
+            l_ctr = l_ctr[l_mask]
+            l_head = l_head[l_mask]
+            l_valid_mask = l_valid_mask[l_mask]
+            l_pos = torch.where(l_valid_mask[..., None], l_pos, torch.zeros_like(l_pos))
+
+            nearest_dist = torch.cdist(pos[:, stream_h_steps - 1, :2], 
+                                       l_pos.view(-1, 2)).min(dim=1).values
+            ag_mask = nearest_dist < 5
+            ag_mask[0] = True
+            pos = pos[ag_mask]
+            head = head[ag_mask]
+            vel = vel[ag_mask]
+            attr = attr[ag_mask]
+            valid_mask = valid_mask[ag_mask]
+
+            head = head[:, :stream_h_steps]
+            vel = vel[:, :stream_h_steps]
+            pos_ctr = pos[:, stream_h_steps - 1].clone()
+
+            if stream_f_steps > 0:
+                type_mask = attr[:, [-1]] != 3
+                cur_pos_hist = pos[:, :stream_h_steps]
+                target = pos[:, stream_h_steps:]#pos[:, stream_h_steps:stream_h_steps + f_steps]
+                target_mask = (
+                    type_mask
+                    & valid_mask[:, [stream_h_steps - 1]]
+                    & valid_mask[:, stream_h_steps:]#valid_mask[:, stream_h_steps:stream_h_steps + f_steps]
+                )
+                valid_mask = valid_mask[:, :stream_h_steps]
+                target = torch.where(
+                    target_mask.unsqueeze(-1),
+                    target - pos_ctr.unsqueeze(1), torch.zeros_like(target),
+                )
+            else:
+                cur_pos_hist = pos[:, :stream_h_steps]
+                target = None
+                target_mask = None
+                valid_mask = valid_mask[:, :stream_h_steps]
+
+            diff_mask = valid_mask[:, :stream_h_steps - 1] & valid_mask[:, 1:stream_h_steps]
+            tmp_pos = cur_pos_hist.clone()
+            pos_diff = cur_pos_hist[:, 1:stream_h_steps] - cur_pos_hist[:, :stream_h_steps - 1]
+            cur_pos_hist[:, 1:stream_h_steps] = torch.where(
+                diff_mask.unsqueeze(-1),
+                pos_diff,
+                torch.zeros(cur_pos_hist.size(0), stream_h_steps - 1, 2, device=device),
+            )
+            cur_pos_hist[:, 0] = torch.zeros(cur_pos_hist.size(0), 2, device=device)
+
+            tmp_vel = vel.clone()
+            vel_diff = vel[:, 1:stream_h_steps] - vel[:, :stream_h_steps - 1]
+            vel[:, 1:stream_h_steps] = torch.where(
+                diff_mask,
+                vel_diff,
+                torch.zeros(vel.size(0), stream_h_steps - 1, device=device),
+            )
+            vel[:, 0] = torch.zeros(vel.size(0), device=device)
+
+            x_positions_diff_list.append(cur_pos_hist)
+            x_attr_list.append(attr)
+            x_positions_list.append(tmp_pos)
+            x_centers_list.append(pos_ctr)
+            x_angles_list.append(head)
+            x_velocity_list.append(tmp_vel)
+            x_velocity_diff_list.append(vel)
+            x_valid_mask_list.append(valid_mask)
+
+            lane_positions_list.append(l_pos)
+            lane_centers_list.append(l_ctr)
+            lane_angles_list.append(l_head)
+            lane_attr_list.append(l_attr)
+            lane_valid_mask_list.append(l_valid_mask)
+            is_intersections_list.append(l_is_int)
+
+            if target is not None:
+                target_list.append(target)
+                target_mask_list.append(target_mask)
+
+            origin_list.append(origin)
+            theta_list.append(theta)
+
+        frame_data = {
+            'x_positions_diff': pad_sequence(x_positions_diff_list, batch_first=True),
+            'x_attr': pad_sequence(x_attr_list, batch_first=True),
+            'x_positions': pad_sequence(x_positions_list, batch_first=True),
+            'x_centers': pad_sequence(x_centers_list, batch_first=True),
+            'x_angles': pad_sequence(x_angles_list, batch_first=True),
+            'x_velocity': pad_sequence(x_velocity_list, batch_first=True),
+            'x_velocity_diff': pad_sequence(x_velocity_diff_list, batch_first=True),
+            'x_valid_mask': pad_sequence(x_valid_mask_list, batch_first=True, padding_value=False),
+            'lane_positions': pad_sequence(lane_positions_list, batch_first=True),
+            'lane_centers': pad_sequence(lane_centers_list, batch_first=True),
+            'lane_angles': pad_sequence(lane_angles_list, batch_first=True),
+            'lane_attr': pad_sequence(lane_attr_list, batch_first=True),
+            'lane_valid_mask': pad_sequence(lane_valid_mask_list, batch_first=True, padding_value=False),
+            'is_intersections': pad_sequence(is_intersections_list, batch_first=True),
+            'origin': torch.stack(origin_list, dim=0),
+            'theta': torch.stack(theta_list, dim=0),
+            'scenario_id': fmae_data['scenario_id'],
+            'track_id': fmae_data.get('track_id', []),
+            'timestamp': torch.full((B,), step * 0.1, dtype=torch.float32, device=device),
+        }
+
+        if len(target_list) > 0:
+            frame_data['target'] = pad_sequence(target_list, batch_first=True)
+            frame_data['target_mask'] = pad_sequence(target_mask_list, batch_first=True, padding_value=False)
+        else:
+            frame_data['target'] = None
+            frame_data['target_mask'] = None
+
+        frame_data['x_key_valid_mask'] = frame_data['x_valid_mask'].any(-1)
+        frame_data['lane_key_valid_mask'] = frame_data['lane_valid_mask'].any(-1)
+
+        return frame_data
     
     def convert_to_qcnet_format(self, input):
         return
