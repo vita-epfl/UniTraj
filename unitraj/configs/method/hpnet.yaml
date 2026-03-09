@@ -1,0 +1,44 @@
+# HPNet configuration for UniTraj framework
+model_name: hpnet
+
+# Model architecture parameters
+hidden_dim: 128
+num_modes: 6
+num_historical_steps: 21
+num_future_steps: 60
+pos_duration: 21
+pred_duration: 21
+
+# Radius parameters (in meters)
+a2a_radius: 50.0
+l2a_radius: 50.0
+lane_occlusion_ratio: 0.2
+
+# Attention mechanism parameters
+num_visible_steps: 2
+num_attn_layers: 2
+num_hops: 4
+num_heads: 8
+dropout: 0.2
+
+# Training parameters
+max_epochs: 50
+
+
+# Optimizer parameters
+lr: 2e-4
+weight_decay: 1e-4
+warmup_epochs: 6
+T_max: 50
+grad_clip_norm: 5.0
+
+# Batch size - reduced for CPU/debug mode
+train_batch_size: 8
+eval_batch_size: 8
+
+# data related
+max_num_agents: 32
+map_range: 100
+max_num_roads: 128
+max_points_per_lane: 20
+manually_split_lane: False

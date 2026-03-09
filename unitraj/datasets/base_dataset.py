@@ -58,7 +58,6 @@ class BaseDataset(Dataset):
                 else:
 
                     _, summary_list, mapping = read_dataset_summary(data_path)
-
                     if os.path.exists(self.cache_path):
                         shutil.rmtree(self.cache_path)
                     os.makedirs(self.cache_path, exist_ok=True)
@@ -217,6 +216,7 @@ class BaseDataset(Dataset):
                 cur_info['speed_limit_mph'] = v.get('speed_limit_mph', None)
                 cur_info['interpolating'] = v.get('interpolating', None)
                 cur_info['entry_lanes'] = v.get('entry_lanes', None)
+                cur_info['exit_lanes'] = v.get('exit_lanes', None)  # Add exit_lanes for HPNet
                 try:
                     cur_info['left_boundary'] = [{
                         'start_index': x['self_start_index'], 'end_index': x['self_end_index'],
@@ -233,6 +233,9 @@ class BaseDataset(Dataset):
                 except:
                     cur_info['left_boundary'] = []
                     cur_info['right_boundary'] = []
+                # Also save left_neighbor and right_neighbor as separate fields for HPNet
+                cur_info['left_neighbor'] = v.get('left_neighbor', [])
+                cur_info['right_neighbor'] = v.get('right_neighbor', [])
                 polyline = v['polyline']
                 if self.config["max_points_per_lane"] > polyline.shape[0] and (self.config["method"]["model_name"] != "forecast" and self.config ["method"]["model_name"]  != "EMP"): #for those models the data should already be interpolated correctly for pretrained checkpoints to work properly
                     polyline = interpolate_polyline(polyline)

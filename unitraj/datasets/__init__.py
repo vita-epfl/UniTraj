@@ -4,6 +4,7 @@ from .wayformer_dataset import WayformerDataset
 from .fmae_dataset import FMAEDataset
 from .EMP_dataset import EMPDataset
 from .SMART_dataset import SMARTDataset
+from .hpnet_dataset import HPNetDataset
 
 __all__ = {
     'autobot': AutoBotDataset,
@@ -13,6 +14,7 @@ __all__ = {
     'MAE': FMAEDataset,
     'EMP': EMPDataset,
     'SMART': SMARTDataset,
+    'hpnet': HPNetDataset,
 }
 
 
