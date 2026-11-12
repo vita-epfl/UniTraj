@@ -49,7 +49,7 @@ class BaseDataset(Dataset):
 
             data_usage_this_dataset = self.config['max_data_num'][cnt]
             self.starting_frame = self.config['starting_frame'][cnt]
-            if self.config['use_cache'] or is_ddp():
+            if (self.config['use_cache'] or is_ddp()) and os.path.exists(self.cache_path):
                 file_list = self.get_data_list(data_usage_this_dataset)
             else:
                 if os.path.exists(self.cache_path) and self.config.get('overwrite_cache', False) is False:
