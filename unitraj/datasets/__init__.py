@@ -4,6 +4,7 @@ from .wayformer_dataset import WayformerDataset
 from .fmae_dataset import FMAEDataset
 from .EMP_dataset import EMPDataset
 from .SEAM_dataset import SEAMDataset
+from .SHARP_dataset import SHARPDataset
 from .SMART_dataset import SMARTDataset
 
 __all__ = {
@@ -14,6 +15,7 @@ __all__ = {
     'MAE': FMAEDataset,
     'EMP': EMPDataset,
     'SEAM': SEAMDataset,
+    'SHARP': SHARPDataset,
     'SMART': SMARTDataset,
 }
 

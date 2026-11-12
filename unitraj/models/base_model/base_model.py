@@ -467,6 +467,20 @@ class BaseModel(pl.LightningModule):
         
         if split_points is None:
             split_points = [h_steps]
+
+        stream_h_steps = self.config.get("stream_past_len", 30)
+        if max(split_points) > h_steps:
+            raise ValueError(
+                f"split_points {split_points} exceed past_len={h_steps}; every split point must be "
+                f"<= past_len (the history/x_angles length). Increase past_len (AV2 uses 50) or "
+                f"lower split_points."
+            )
+        if min(split_points) < stream_h_steps:
+            raise ValueError(
+                f"split_points {split_points} must each be >= stream_past_len={stream_h_steps}; "
+                f"otherwise the per-frame history window start (step - stream_past_len) is negative."
+            )
+
         fmae_data = self.convert_to_fmae_format(input)
         sequence_data = []
         
@@ -484,7 +498,7 @@ class BaseModel(pl.LightningModule):
         stream_f_steps = self.config.get("stream_future_len", 80)
 
         pos_hist = fmae_data['x_positions']
-        pos_last = pos_hist[:, :, stream_h_steps - 1, :]
+        pos_last = pos_hist[:, :, h_steps - 1, :]
         pos_future = fmae_data['y'] + pos_last.unsqueeze(2)
         pos_full = torch.cat([pos_hist, pos_future], dim=2)
 
@@ -513,6 +527,9 @@ class BaseModel(pl.LightningModule):
 
         origin_list = []
         theta_list = []
+
+        agent_ids_list = []
+        lane_ids_list = []
 
         for cur_batch_idx in range(B):
             focal_idx = 0
@@ -559,6 +576,9 @@ class BaseModel(pl.LightningModule):
             l_is_int = l_is_int[lane_valid_mask_all]
             l_point_valid = lane_point_valid_mask_all[lane_valid_mask_all]
 
+            lane_mid_idx = l_pos.shape[1] // 2 - 1
+            lane_ids = torch.abs(l_pos[:, lane_mid_idx, 0] - l_pos[:, lane_mid_idx, 1])
+
             number_of_lanes = l_pos.shape[0]
             lane_length = l_pos.shape[1]
 
@@ -585,6 +605,7 @@ class BaseModel(pl.LightningModule):
             l_ctr = l_ctr[l_mask]
             l_head = l_head[l_mask]
             l_valid_mask = l_valid_mask[l_mask]
+            lane_ids = lane_ids[l_mask]
             l_pos = torch.where(l_valid_mask[..., None], l_pos, torch.zeros_like(l_pos))
 
             nearest_dist = torch.cdist(pos[:, stream_h_steps - 1, :2], 
@@ -596,6 +617,7 @@ class BaseModel(pl.LightningModule):
             vel = vel[ag_mask]
             attr = attr[ag_mask]
             valid_mask = valid_mask[ag_mask]
+            agent_ids = idxs[ag_mask].to(torch.float32)
 
             head = head[:, :stream_h_steps]
             vel = vel[:, :stream_h_steps]
@@ -656,6 +678,9 @@ class BaseModel(pl.LightningModule):
             lane_valid_mask_list.append(l_valid_mask)
             is_intersections_list.append(l_is_int)
 
+            agent_ids_list.append(agent_ids)
+            lane_ids_list.append(lane_ids)
+
             if target is not None:
                 target_list.append(target)
                 target_mask_list.append(target_mask)
@@ -678,6 +703,8 @@ class BaseModel(pl.LightningModule):
             'lane_attr': pad_sequence(lane_attr_list, batch_first=True),
             'lane_valid_mask': pad_sequence(lane_valid_mask_list, batch_first=True, padding_value=False),
             'is_intersections': pad_sequence(is_intersections_list, batch_first=True),
+            'agent_ids': pad_sequence(agent_ids_list, batch_first=True, padding_value=0.2345),
+            'lane_ids': pad_sequence(lane_ids_list, batch_first=True, padding_value=0.2345),
             'origin': torch.stack(origin_list, dim=0),
             'theta': torch.stack(theta_list, dim=0),
             'scenario_id': fmae_data['scenario_id'],
