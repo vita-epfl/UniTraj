@@ -5,6 +5,8 @@ from unitraj.models.fmae.trainer_mae import TrainerMAE
 from unitraj.models.fmae.trainer_forecast import TrainerForecast
 from unitraj.models.emp.trainer_forecast import TrainerEMP
 from unitraj.models.smart.smart import SMART
+from unitraj.models.seam.pl_modules import StreamLightningModule
+from unitraj.models.sharp.pl_modules import StreamLightningModule as SharpStreamLightningModule
 
 __all__ = {
     'autobot': AutoBotEgo,
@@ -14,6 +16,8 @@ __all__ = {
     'forecast': TrainerForecast,
     'EMP': TrainerEMP,
     'SMART': SMART,
+    'SEAM': StreamLightningModule,
+    'SHARP': SharpStreamLightningModule,
 }
 
 

@@ -21,6 +21,9 @@ and [WandB](https://wandb.ai/site), the framework is easy to configure, train an
 ![system](docs/assets/support.png)
 
 ## 📰 News & Updates
+### Nov. 2026
+
+- 🔥 UniTraj now supports two streaming-based motion forecasting models: [Short-Window Streaming for Accurate and Robust Prediction in Motion Forecasting (SHARP)](https://a-pru.github.io/sharp/) and [Streaming Real-Time Trajectory Prediction Using Endpoint-Aware Modeling (SEAM)](https://github.com/a-pru/seam)!
 
 ### Sep. 2025
 
@@ -86,6 +89,8 @@ unitraj
 │   │   ├── MAE.yaml
 │   │   ├── forecast.yaml
 │   │   ├── EMP.yaml
+│   │   ├── SEAM.yaml
+│   │   ├── SHARP.yaml
 ├── datasets
 │   ├── base_dataset.py
 │   ├── autobot_dataset.py
@@ -93,12 +98,16 @@ unitraj
 │   ├── MTR_dataset.py
 │   ├── fmae_dataset.py
 │   ├── EMP_dataset.py
+│   ├── SEAM_dataset.py
+│   ├── SHARP_dataset.py
 ├── models
 │   ├── autobot
 │   ├── mtr
 │   ├── wayformer
 │   ├── fmae
 │   ├── emp
+│   ├── seam
+│   ├── sharp
 │   ├── base_model
 ├── utils
 ```

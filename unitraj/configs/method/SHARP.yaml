@@ -1,0 +1,58 @@
+# common
+model_name: SHARP
+
+# model  (matches sharp/conf/model/Sharp_av2.yaml)
+embed_dim: 128
+encoder_depth: 4
+num_heads: 8
+mlp_ratio: 4.0
+qkv_bias: False
+drop_path: 0.2
+use_stream_encoder: True
+use_stream_decoder: True
+use_target_context: True
+k: 6
+ma: False
+# SHARP-specific (extends SEAM) -- from Sharp_av2.yaml
+dual: True
+biased_interaction: True
+dm: av2
+num_grad_frame: 10        # Sharp_av2 pl_module.num_grad_frame
+
+# train  (optim from Sharp_av2.yaml, schedule/batch from sharp/conf/config.yaml)
+max_epochs: 60            # config.yaml: epochs
+learning_rate: 1e-3       # Sharp_av2 optim.lr
+weight_decay: 1e-2        # Sharp_av2 optim.weight_decay
+min_lr: 1e-5              # Sharp_av2 optim.min_lr
+warmup_ratio: 0.167       # Sharp_av2 optim.warmup_ratio
+learning_rate_sched: [ 10, 20, 30, 40, 50 ]
+optimizer: AdamW #According to PyTorch naming
+scheduler: multistep # plateau, multistep
+ewc_lambda: 2000
+grad_clip_norm: 5         # config.yaml trainer.gradient_clip_val
+train_batch_size: 32      # config.yaml: batch_size
+eval_batch_size: 32       # config.yaml: batch_size
+strategy: ddp_find_unused_parameters_false
+gradient_clip_algorithm: norm
+sync_batchnorm: True
+
+# data related
+# NOTE: these override the global config.yaml when merged in train.py.
+# split_points must all be <= past_len (the per-step "now" indexes into the past_len-long
+# x_angles in base_model._create_seam_frame_at_step), so AV2 needs past_len=50.
+past_len: 50    # AV2 standard 5s history @10Hz; must cover max(split_points)=50
+future_len: 60  # AV2 standard 6s GT horizon (stream_future_len self-clips to this)
+max_num_agents: 32
+map_range: 150            # av2_stream.yaml dataset.radius
+max_num_roads: 384
+max_points_per_lane: 20 # will be overwritten if manually_split_lane is True
+manually_split_lane: False
+# lane split related params
+point_sampled_interval: 1
+num_points_each_polyline: 20
+vector_break_dist_thresh: 1.0
+# streaming window  (matches sharp/conf/datamodule/av2_stream.yaml)
+split_points: [10, 20, 30, 40, 50]   # av2_stream dataset.split_points
+stream_past_len: 10                  # av2_stream dataset.num_historical_steps
+stream_future_len: 100               # av2_stream dataset.num_future_steps (data extraction window; self-clips to available future_len)
+stream_fut_len: 100                  # model future_steps (Sharp_av2 model.future_steps)

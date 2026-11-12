@@ -1,0 +1,47 @@
+# common
+model_name: SEAM
+
+# model
+embed_dim: 128
+encoder_depth: 4
+num_heads: 8
+mlp_ratio: 4.0
+qkv_bias: False
+drop_path: 0.2
+use_stream_encoder: True
+use_stream_decoder: True
+use_target_context: True
+k: 6
+ma: False
+
+# train
+max_epochs: 80
+learning_rate: 0.0001 # 0.00075 # 1e-3 for lanegcn
+weight_decay: 0.0001
+min_lr: 1e-6
+warmup_ratio: 0.1
+learning_rate_sched: [ 10, 20, 30, 40, 50 ]
+optimizer: AdamW #According to PyTorch naming
+scheduler: multistep # plateau, multistep
+ewc_lambda: 2000
+grad_clip_norm: 5
+train_batch_size: 16 #32 #128 #32 #128
+eval_batch_size: 16 #32 #512 #32 #128
+strategy: ddp_find_unused_parameters_false
+gradient_clip_algorithm: norm
+sync_batchnorm: True
+
+# data related
+max_num_agents: 32
+map_range: 150
+max_num_roads: 384
+max_points_per_lane: 20 # will be overwritten if manually_split_lane is True
+manually_split_lane: False
+# lane split related params
+point_sampled_interval: 1
+num_points_each_polyline: 20
+vector_break_dist_thresh: 1.0
+split_points: [30,40,50]
+stream_past_len: 30
+stream_fut_len: 80
+
